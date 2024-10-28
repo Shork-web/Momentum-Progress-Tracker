@@ -12,6 +12,7 @@ import TabPanel from './components/TabPanel'
 import LandingPage from './components/LandingPage'
 import Login from './components/Login'
 import SignUp from './components/Signup'
+import TaskForm from './components/TaskForm'
 
 function App() {
   const [tasks, setTasks] = useState([])
@@ -123,6 +124,22 @@ function App() {
     setLogoutDialogOpen(false)
   }
 
+  const handleAddTask = (newTask) => {
+    setTasks(prevTasks => [...prevTasks, newTask]);
+    addNotification('New task added successfully!');
+  };
+
+  const handleToggleTask = (taskId) => {
+    setTasks(prevTasks => prevTasks.map(task =>
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    ));
+  };
+
+  const handleDeleteTask = (taskId) => {
+    setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+    addNotification('Task deleted successfully!');
+  };
+
   if (!currentUser) {
     if (!showAuth) {
       return (
@@ -178,16 +195,22 @@ function App() {
           </Tabs>
         </AppBar>
         <NotificationCenter notifications={notifications} setNotifications={setNotifications} />
-        <Box sx={{ flexGrow: 1, overflow: 'hidden', width: '100%' }}>
+        <Box sx={{ flexGrow: 1, overflow: 'auto', width: '100%' }}>
           <TabPanel value={tabValue} index={0}>
             <Dashboard tasks={tasks} milestones={milestones} />
           </TabPanel>
           <TabPanel value={tabValue} index={1}>
-            <TaskList 
-              tasks={tasks} 
-              setTasks={setTasks} 
-              addNotification={addNotification}
-            />
+            <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
+              <Typography variant="h4" gutterBottom>
+                Task Manager
+              </Typography>
+              <TaskList 
+                tasks={tasks}
+                onToggleTask={handleToggleTask}
+                onDeleteTask={handleDeleteTask}
+                onAddTask={handleAddTask}
+              />
+            </Box>
           </TabPanel>
           <TabPanel value={tabValue} index={2}>
             <MilestoneTracker 
