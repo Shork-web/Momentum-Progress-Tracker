@@ -12,18 +12,39 @@ import TabPanel, { StyledTabs, a11yProps } from './components/TabPanel'
 import LandingPage from './components/LandingPage'
 import Login from './components/Login'
 import SignUp from './components/Signup'
-import TaskForm from './components/TaskForm'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined'
 
 function App() {
-  const [tasks, setTasks] = useState([])
-  const [milestones, setMilestones] = useState([])
+  const [tasks, setTasks] = useState(() => {
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      const savedTasks = localStorage.getItem(`tasks_${JSON.parse(currentUser).username}`);
+      return savedTasks ? JSON.parse(savedTasks) : [];
+    }
+    return [];
+  });
+
+  const [milestones, setMilestones] = useState(() => {
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      const savedMilestones = localStorage.getItem(`milestones_${JSON.parse(currentUser).username}`);
+      return savedMilestones ? JSON.parse(savedMilestones) : [];
+    }
+    return [];
+  });
+
   const [notifications, setNotifications] = useState([])
-  const [tabValue, setTabValue] = useState(0)
+  const [tabValue, setTabValue] = useState(() => {
+    const savedTab = localStorage.getItem('currentTab');
+    return savedTab ? parseInt(savedTab) : 0;
+  });
   const [mode, setMode] = useState('light')
-  const [currentUser, setCurrentUser] = useState(null)
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem('currentUser');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [showSignUp, setShowSignUp] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false) // New state for logout dialog
@@ -54,32 +75,6 @@ function App() {
     },
   })
 
-  useEffect(() => {
-    if (currentUser) {
-      const savedTasks = localStorage.getItem(`tasks_${currentUser.username}`)
-      setTasks(savedTasks ? JSON.parse(savedTasks) : [])
-    }
-  }, [currentUser])
-
-  useEffect(() => {
-    if (currentUser) {
-      const savedMilestones = localStorage.getItem(`milestones_${currentUser.username}`)
-      setMilestones(savedMilestones ? JSON.parse(savedMilestones) : [])
-    }
-  }, [currentUser])
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem(`tasks_${currentUser.username}`, JSON.stringify(tasks))
-    }
-  }, [tasks, currentUser])
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem(`milestones_${currentUser.username}`, JSON.stringify(milestones))
-    }
-  }, [milestones, currentUser])
-
   const addNotification = (message) => {
     setNotifications(prev => [...prev, { id: Date.now(), message }])
   }
@@ -102,9 +97,11 @@ function App() {
   }
 
   const handleLogout = () => {
-    setCurrentUser(null)
-    setShowAuth(true)
-    setLogoutDialogOpen(false) // Close the dialog after logging out
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('currentTab');
+    setCurrentUser(null);
+    setShowAuth(true);
+    setLogoutDialogOpen(false);
   }
 
   const handleSignUp = () => {
@@ -128,20 +125,51 @@ function App() {
   }
 
   const handleAddTask = (newTask) => {
-    setTasks(prevTasks => [...prevTasks, newTask]);
+    const updatedTasks = [...tasks, newTask];
+    setTasks(updatedTasks);
+    if (currentUser) {
+      localStorage.setItem(`tasks_${currentUser.username}`, JSON.stringify(updatedTasks));
+    }
     addNotification('New task added successfully!');
   };
 
   const handleToggleTask = (taskId) => {
-    setTasks(prevTasks => prevTasks.map(task =>
+    const updatedTasks = tasks.map(task =>
       task.id === taskId ? { ...task, completed: !task.completed } : task
-    ));
+    );
+    setTasks(updatedTasks);
+    if (currentUser) {
+      localStorage.setItem(`tasks_${currentUser.username}`, JSON.stringify(updatedTasks));
+    }
   };
 
   const handleDeleteTask = (taskId) => {
-    setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+    const updatedTasks = tasks.filter(task => task.id !== taskId);
+    setTasks(updatedTasks);
+    if (currentUser) {
+      localStorage.setItem(`tasks_${currentUser.username}`, JSON.stringify(updatedTasks));
+    }
     addNotification('Task deleted successfully!');
   };
+
+  const handleMilestoneUpdate = (updatedMilestones) => {
+    setMilestones(updatedMilestones);
+    if (currentUser) {
+      localStorage.setItem(`milestones_${currentUser.username}`, JSON.stringify(updatedMilestones));
+    }
+  };
+
+  useEffect(() => {
+    localStorage.setItem('currentTab', tabValue.toString());
+  }, [tabValue]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('currentUser');
+    }
+  }, [currentUser]);
 
   if (!currentUser) {
     if (!showAuth) {
@@ -275,7 +303,7 @@ function App() {
           <TabPanel value={tabValue} index={2}>
             <MilestoneTracker 
               milestones={milestones} 
-              setMilestones={setMilestones} 
+              setMilestones={handleMilestoneUpdate}
               addNotification={addNotification}
             />
           </TabPanel>
