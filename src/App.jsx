@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { ThemeProvider, createTheme, styled } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import { Box, Typography, Tabs, Tab, AppBar, Toolbar, IconButton, useMediaQuery, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material'
 import Brightness4Icon from '@mui/icons-material/Brightness4'
@@ -13,6 +13,42 @@ import LandingPage from './components/LandingPage'
 import Login from './components/Login'
 import SignUp from './components/Signup'
 import TaskForm from './components/TaskForm'
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
+import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined'
+
+const StyledTabs = styled(Tabs)(({ theme }) => ({
+  backgroundColor: 'transparent',
+  minHeight: '40px',
+  '& .MuiTabs-indicator': {
+    height: 3,
+    borderRadius: '3px 3px 0 0',
+    backgroundColor: '#fff',
+  },
+  '& .MuiTab-root': {
+    minHeight: '40px',
+    padding: '8px 16px',
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    textTransform: 'none',
+    letterSpacing: '0.3px',
+    transition: 'all 0.2s ease',
+    
+    '&:hover': {
+      color: '#fff',
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    
+    '&.Mui-selected': {
+      color: '#fff',
+      fontWeight: 600,
+    },
+  },
+  '& .MuiTabs-flexContainer': {
+    gap: theme.spacing(2),
+  },
+}));
 
 function App() {
   const [tasks, setTasks] = useState([])
@@ -167,32 +203,91 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw' }}>
-        <AppBar position="static" elevation={0}>
-          <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              Progress Tracker
-            </Typography>
-            <IconButton sx={{ ml: 1 }} onClick={toggleColorMode} color="inherit">
-              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-            </IconButton>
-            <Button color="inherit" onClick={openLogoutDialog}>Logout</Button>
-          </Toolbar>
-          <Tabs 
-            value={tabValue} 
-            onChange={handleTabChange} 
-            aria-label="app tabs"
-            centered
+        <AppBar 
+          position="static" 
+          elevation={0}
+          sx={{
+            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+            background: 'linear-gradient(to right, #1976d2, #1e88e5)'
+          }}
+        >
+          <Toolbar 
+            variant="dense" 
             sx={{ 
-              '& .MuiTab-root': { 
-                color: 'rgba(255, 255, 255, 0.7)',
-                '&.Mui-selected': { color: '#fff' }
-              } 
+              minHeight: '48px',
+              px: { xs: 2, sm: 3 }
             }}
           >
-            <Tab label="Dashboard" />
-            <Tab label="Tasks" />
-            <Tab label="Milestones" />
-          </Tabs>
+            <Typography 
+              variant="h6" 
+              component="div" 
+              sx={{ 
+                flexGrow: 1,
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                letterSpacing: '0.5px'
+              }}
+            >
+              Progress Tracker
+            </Typography>
+            <IconButton 
+              sx={{ 
+                ml: 1,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                }
+              }} 
+              onClick={toggleColorMode} 
+              color="inherit" 
+              size="small"
+            >
+              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+            <Button 
+              color="inherit" 
+              onClick={openLogoutDialog}
+              size="small"
+              sx={{
+                ml: 1,
+                fontSize: '0.875rem',
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: '6px',
+                px: 2,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                }
+              }}
+            >
+              Logout
+            </Button>
+          </Toolbar>
+          <Box sx={{ px: { xs: 2, sm: 3 } }}>
+            <StyledTabs 
+              value={tabValue} 
+              onChange={handleTabChange} 
+              aria-label="app tabs"
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
+            >
+              <Tab 
+                label="Dashboard" 
+                icon={<DashboardOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
+                iconPosition="start"
+              />
+              <Tab 
+                label="Tasks" 
+                icon={<AssignmentOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
+                iconPosition="start"
+              />
+              <Tab 
+                label="Milestones" 
+                icon={<FlagOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
+                iconPosition="start"
+              />
+            </StyledTabs>
+          </Box>
         </AppBar>
         <NotificationCenter notifications={notifications} setNotifications={setNotifications} />
         <Box sx={{ flexGrow: 1, overflow: 'auto', width: '100%' }}>
@@ -200,17 +295,12 @@ function App() {
             <Dashboard tasks={tasks} milestones={milestones} />
           </TabPanel>
           <TabPanel value={tabValue} index={1}>
-            <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
-              <Typography variant="h4" gutterBottom>
-                Task Manager
-              </Typography>
-              <TaskList 
-                tasks={tasks}
-                onToggleTask={handleToggleTask}
-                onDeleteTask={handleDeleteTask}
-                onAddTask={handleAddTask}
-              />
-            </Box>
+            <TaskList 
+              tasks={tasks}
+              onToggleTask={handleToggleTask}
+              onDeleteTask={handleDeleteTask}
+              onAddTask={handleAddTask}
+            />
           </TabPanel>
           <TabPanel value={tabValue} index={2}>
             <MilestoneTracker 

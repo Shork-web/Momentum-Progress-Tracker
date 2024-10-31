@@ -7,12 +7,14 @@ const StyledSnackbar = styled(Snackbar)(({ theme }) => ({
   '& .MuiSnackbarContent-root': {
     backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
-    boxShadow: theme.shadows[3],
-    borderRadius: theme.shape.borderRadius * 2,
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+    borderRadius: 12,
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: theme.spacing(1, 2),
+    padding: theme.spacing(1.5, 2),
+    border: '1px solid rgba(0, 0, 0, 0.05)',
+    backdropFilter: 'blur(10px)',
   },
 }))
 
@@ -32,12 +34,10 @@ function NotificationCenter({ notifications, setNotifications }) {
       return
     }
     setOpen(false)
-    // Remove the current notification immediately
     setNotifications(prev => prev.slice(1))
   }
 
   const handleExited = () => {
-    // This will be called after the fade-out animation is complete
     if (notifications.length > 0) {
       setCurrentNotification(notifications[0])
       setOpen(true)
@@ -47,21 +47,34 @@ function NotificationCenter({ notifications, setNotifications }) {
   return (
     <StyledSnackbar
       anchorOrigin={{
-        vertical: 'bottom',
-        horizontal: 'right',
+        vertical: 'top',
+        horizontal: 'center'
       }}
       open={open}
-      autoHideDuration={2000}
+      autoHideDuration={3000}
       onClose={handleClose}
       onExited={handleExited}
       TransitionComponent={Fade}
-      TransitionProps={{ timeout: 500 }}
+      TransitionProps={{ timeout: 400 }}
+      sx={{
+        mt: 2,
+      }}
       message={
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="body1" sx={{ fontWeight: 'bold', mr: 1 }}>
-            Notification:
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          minWidth: '300px',
+          justifyContent: 'center'
+        }}>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              fontWeight: 500,
+              color: theme => theme.palette.text.primary
+            }}
+          >
+            {currentNotification?.message}
           </Typography>
-          <Typography variant="body2">{currentNotification?.message}</Typography>
         </Box>
       }
       action={
@@ -70,6 +83,12 @@ function NotificationCenter({ notifications, setNotifications }) {
           aria-label="close"
           color="inherit"
           onClick={handleClose}
+          sx={{
+            ml: 2,
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            },
+          }}
         >
           <CloseIcon fontSize="small" />
         </IconButton>
