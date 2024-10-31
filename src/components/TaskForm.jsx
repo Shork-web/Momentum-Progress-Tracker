@@ -110,6 +110,7 @@ function TaskForm({ open, onClose, onAddTask }) {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
+  const [milestone, setMilestone] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -118,6 +119,7 @@ function TaskForm({ open, onClose, onAddTask }) {
       description,
       priority,
       dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      milestone,
     });
     handleClose();
   };
@@ -125,8 +127,9 @@ function TaskForm({ open, onClose, onAddTask }) {
   const handleClose = () => {
     setTitle('');
     setDescription('');
-    setPriority('medium');
+    setPriority('');
     setDueDate('');
+    setMilestone('');
     onClose();
   };
 
@@ -165,12 +168,22 @@ function TaskForm({ open, onClose, onAddTask }) {
             required
           />
           <StyledTextField
+            label="Milestone"
+            fullWidth
+            multiline
+            rows={3}
+            value={milestone}
+            onChange={(e) => setMilestone(e.target.value)}
+            required
+          />
+          <StyledTextField
             label="Description"
             fullWidth
             multiline
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            required
           />
           <FormControl fullWidth>
             <InputLabel sx={{ 
@@ -185,6 +198,7 @@ function TaskForm({ open, onClose, onAddTask }) {
               value={priority}
               label="Priority"
               onChange={(e) => setPriority(e.target.value)}
+              required
             >
               <MenuItem value="low">Low</MenuItem>
               <MenuItem value="medium">Medium</MenuItem>
@@ -200,6 +214,7 @@ function TaskForm({ open, onClose, onAddTask }) {
             InputLabelProps={{
               shrink: true,
             }}
+            required
           />
         </Box>
       </DialogContent>
