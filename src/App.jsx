@@ -8,7 +8,7 @@ import TaskList from './components/TaskList'
 import MilestoneTracker from './components/MilestoneTracker'
 import NotificationCenter from './components/NotificationCenter'
 import Dashboard from './components/Dashboard'
-import TabPanel from './components/TabPanel'
+import TabPanel, { StyledTabs, a11yProps } from './components/TabPanel'
 import LandingPage from './components/LandingPage'
 import Login from './components/Login'
 import SignUp from './components/Signup'
@@ -16,39 +16,6 @@ import TaskForm from './components/TaskForm'
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined'
-
-const StyledTabs = styled(Tabs)(({ theme }) => ({
-  backgroundColor: 'transparent',
-  minHeight: '40px',
-  '& .MuiTabs-indicator': {
-    height: 3,
-    borderRadius: '3px 3px 0 0',
-    backgroundColor: '#fff',
-  },
-  '& .MuiTab-root': {
-    minHeight: '40px',
-    padding: '8px 16px',
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-    textTransform: 'none',
-    letterSpacing: '0.3px',
-    transition: 'all 0.2s ease',
-    
-    '&:hover': {
-      color: '#fff',
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    
-    '&.Mui-selected': {
-      color: '#fff',
-      fontWeight: 600,
-    },
-  },
-  '& .MuiTabs-flexContainer': {
-    gap: theme.spacing(2),
-  },
-}));
 
 function App() {
   const [tasks, setTasks] = useState([])
@@ -266,7 +233,7 @@ function App() {
             <StyledTabs 
               value={tabValue} 
               onChange={handleTabChange} 
-              aria-label="app tabs"
+              aria-label="app navigation tabs"
               variant="scrollable"
               scrollButtons="auto"
               allowScrollButtonsMobile
@@ -275,16 +242,19 @@ function App() {
                 label="Dashboard" 
                 icon={<DashboardOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
                 iconPosition="start"
+                {...a11yProps(0)}
               />
               <Tab 
                 label="Tasks" 
                 icon={<AssignmentOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
                 iconPosition="start"
+                {...a11yProps(1)}
               />
               <Tab 
                 label="Milestones" 
                 icon={<FlagOutlinedIcon sx={{ fontSize: '1.25rem' }} />}
                 iconPosition="start"
+                {...a11yProps(2)}
               />
             </StyledTabs>
           </Box>
