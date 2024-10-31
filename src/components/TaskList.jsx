@@ -134,7 +134,7 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask }) {
   );
 
   const TaskSection = ({ title, tasks, type }) => (
-    <Box>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography 
         variant="h6" 
         sx={{ 
@@ -163,9 +163,10 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask }) {
       </Typography>
 
       <Box sx={{ 
-        maxHeight: '70vh',
+        flexGrow: 1,
         overflow: 'auto',
         pr: 1,
+        height: 'calc(100vh - 300px)',
         '&::-webkit-scrollbar': {
           width: '4px',
         },
@@ -282,24 +283,19 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask }) {
 
   return (
     <Box sx={{ 
-      minHeight: '100vh',
+      height: '100vh',
       backgroundColor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#f8fafc',
       py: 3,
-      '&::-webkit-scrollbar': {
-        width: '0.4em'
-      },
-      '&::-webkit-scrollbar-track': {
-        boxShadow: 'inset 0 0 6px rgba(0,0,0,0.00)',
-      },
-      '&::-webkit-scrollbar-thumb': {
-        backgroundColor: theme.palette.mode === 'dark' 
-          ? 'rgba(255,255,255,.1)'
-          : 'rgba(0,0,0,.1)',
-        outline: '1px solid slategrey'
-      }
+      overflow: 'hidden',
     }}>
-      <Container maxWidth="xl">
-        <Grid container spacing={3}>
+      <Container maxWidth="xl" sx={{ 
+        height: '100%',
+        overflow: 'hidden'
+      }}>
+        <Grid container spacing={3} sx={{ 
+          height: '100%',
+          overflow: 'hidden'
+        }}>
           {/* Stats Section */}
           <Grid item xs={12}>
             <Grid container spacing={3}>
@@ -331,9 +327,12 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask }) {
           </Grid>
 
           {/* Tasks Section */}
-          <Grid item xs={12}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+          <Grid item xs={12} sx={{ 
+            height: 'calc(100vh - 200px)',
+            overflow: 'hidden'
+          }}>
+            <Grid container spacing={3} sx={{ height: '100%' }}>
+              <Grid item xs={12} md={6} sx={{ height: '100%' }}>
                 <TaskContainer>
                   <TaskSection 
                     title="Active Tasks" 
@@ -342,7 +341,7 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask }) {
                   />
                 </TaskContainer>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={6} sx={{ height: '100%' }}>
                 <TaskContainer>
                   <TaskSection 
                     title="Completed" 

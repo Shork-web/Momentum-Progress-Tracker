@@ -6,6 +6,8 @@ import AssignmentIcon from '@mui/icons-material/Assignment'
 import FlagIcon from '@mui/icons-material/Flag'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
+import PropTypes from 'prop-types'
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -40,6 +42,98 @@ const StatCard = ({ icon, title, value, color, trend }) => {
   )
 }
 
+const UpcomingTaskItem = ({ task, getPriorityColor }) => {
+  const theme = useTheme();
+  
+  const formatDate = (dateString) => {
+    const options = { month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  return (
+    <ListItem 
+      disablePadding 
+      sx={{ 
+        mb: 2,
+        p: 2,
+        borderRadius: theme.spacing(1),
+        background: theme.palette.mode === 'dark' 
+          ? 'linear-gradient(145deg, #2c2c2c 30%, #353535 90%)'
+          : 'linear-gradient(145deg, #f8f9fa 30%, #ffffff 90%)',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: theme.palette.mode === 'dark'
+            ? '0 4px 12px rgba(0, 0, 0, 0.3)'
+            : '0 4px 12px rgba(0, 0, 0, 0.1)',
+        },
+      }}
+    >
+      <ListItemText 
+        primary={
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                fontWeight: 500,
+                color: theme.palette.text.primary,
+              }}
+            >
+              {task.title}
+            </Typography>
+            {task.description && (
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {task.description}
+              </Typography>
+            )}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 0.5,
+                color: getPriorityColor(task.priority),
+                fontSize: '0.75rem',
+              }}>
+                <FlagIcon sx={{ fontSize: '0.875rem' }} />
+                {task.priority}
+              </Box>
+              {task.dueDate && (
+                <Chip
+                  icon={<CalendarTodayIcon sx={{ fontSize: '0.875rem' }} />}
+                  label={formatDate(task.dueDate)}
+                  size="small"
+                  sx={{ 
+                    height: 24,
+                    backgroundColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(241, 245, 249, 0.1)'
+                      : '#f8fafc',
+                    color: theme.palette.text.secondary,
+                    '& .MuiChip-label': { px: 1 },
+                    '& .MuiChip-icon': { 
+                      ml: 1,
+                      color: theme.palette.text.secondary,
+                    },
+                  }}
+                />
+              )}
+            </Box>
+          </Box>
+        }
+      />
+    </ListItem>
+  );
+};
+
 function Dashboard({ tasks, milestones }) {
   const theme = useTheme()
 
@@ -66,7 +160,7 @@ function Dashboard({ tasks, milestones }) {
   const COLORS = [theme.palette.primary.main, theme.palette.secondary.main]
 
   const upcomingTasks = tasks
-    .filter(task => !task.completed && task.dueDate)
+    .filter(task => !task.completed)
     .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
     .slice(0, 5)
 
@@ -93,132 +187,163 @@ function Dashboard({ tasks, milestones }) {
 
   return (
     <Box sx={{ 
-      flexGrow: 1, 
-      height: 'calc(100vh - 64px)',
-      overflow: 'auto', 
+      height: '100vh',
+      overflow: 'hidden',
       padding: theme.spacing(3),
       backgroundColor: theme.palette.background.default,
-      '&::-webkit-scrollbar': {
-        width: '0.4em'
-      },
-      '&::-webkit-scrollbar-track': {
-        boxShadow: 'inset 0 0 6px rgba(0,0,0,0.00)',
-        webkitBoxShadow: 'inset 0 0 6px rgba(0,0,0,0.00)'
-      },
-      '&::-webkit-scrollbar-thumb': {
-        backgroundColor: 'rgba(0,0,0,.1)',
-        outline: '1px solid slategrey'
-      }
     }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={3}>
-          <StatCard 
-            icon={<AssignmentIcon fontSize="large" />} 
-            title="Total Tasks" 
-            value={tasks.length} 
-            color={theme.palette.primary.main}
-            trend={5}
-          />
+      <Grid container spacing={3} sx={{ height: '100%' }}>
+        <Grid item xs={12}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={3}>
+              <StatCard 
+                icon={<AssignmentIcon fontSize="large" />} 
+                title="Total Tasks" 
+                value={tasks.length} 
+                color={theme.palette.primary.main}
+                trend={5}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <StatCard 
+                icon={<FlagIcon fontSize="large" />} 
+                title="Total Milestones" 
+                value={milestones.length} 
+                color={theme.palette.secondary.main}
+                trend={2}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <StatCard 
+                icon={<TrendingUpIcon fontSize="large" />} 
+                title="Completion Rate" 
+                value={`${Math.round((taskStatus.completed / tasks.length) * 100)}%`} 
+                color={theme.palette.success.main}
+                trend={8}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <StatCard 
+                icon={<CheckCircleOutlineIcon fontSize="large" />} 
+                title="Completed Tasks" 
+                value={taskStatus.completed} 
+                color={theme.palette.info.main}
+                trend={3}
+              />
+            </Grid>
+          </Grid>
         </Grid>
-        <Grid item xs={12} md={3}>
-          <StatCard 
-            icon={<FlagIcon fontSize="large" />} 
-            title="Total Milestones" 
-            value={milestones.length} 
-            color={theme.palette.secondary.main}
-            trend={2}
-          />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <StatCard 
-            icon={<TrendingUpIcon fontSize="large" />} 
-            title="Completion Rate" 
-            value={`${Math.round((taskStatus.completed / tasks.length) * 100)}%`} 
-            color={theme.palette.success.main}
-            trend={8}
-          />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <StatCard 
-            icon={<CheckCircleOutlineIcon fontSize="large" />} 
-            title="Completed Tasks" 
-            value={taskStatus.completed} 
-            color={theme.palette.info.main}
-            trend={3}
-          />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <StyledPaper elevation={3} sx={{ height: 400, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Upcoming Tasks</Typography>
-            <List sx={{ flexGrow: 1, overflow: 'auto' }}>
-              {upcomingTasks.map(task => (
-                <ListItem key={task.id} disablePadding sx={{ mb: 2 }}>
-                  <ListItemText 
-                    primary={
-                      <Box display="flex" alignItems="center">
-                        <Typography variant="body1" sx={{ mr: 1, fontWeight: 'medium' }}>{task.name}</Typography>
-                        <Chip 
-                          label={task.priority} 
-                          size="small" 
-                          sx={{ backgroundColor: getPriorityColor(task.priority), color: 'white' }}
-                        />
-                      </Box>
-                    }
-                    secondary={
-                      <Typography variant="body2" component="span" color="text.secondary">
-                        Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'Not set'}
-                      </Typography>
-                    }
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </StyledPaper>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <StyledPaper elevation={3} sx={{ height: 400 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Task Progress</Typography>
-            <ResponsiveContainer width="100%" height="90%">
-              <PieChart>
-                <Pie
-                  data={taskData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  paddingAngle={5}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {taskData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: theme.palette.background.paper, borderRadius: 8 }} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </StyledPaper>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <StyledPaper elevation={3} sx={{ height: 400 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Task Priorities</Typography>
-            <ResponsiveContainer width="100%" height="90%">
-              <BarChart data={priorityData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                <XAxis type="number" stroke={theme.palette.text.secondary} />
-                <YAxis dataKey="name" type="category" stroke={theme.palette.text.secondary} />
-                <Tooltip contentStyle={{ backgroundColor: theme.palette.background.paper, borderRadius: 8 }} />
-                <Legend />
-                <Bar dataKey="value" fill={theme.palette.primary.main} radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </StyledPaper>
+
+        <Grid item xs={12} sx={{ 
+          height: 'calc(100vh - 200px)',
+          overflow: 'hidden'
+        }}>
+          <Grid container spacing={3} sx={{ height: '100%' }}>
+            <Grid item xs={12} md={4}>
+              <StyledPaper elevation={3} sx={{ 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column' 
+              }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ px: 2, pt: 1 }}>
+                  Upcoming Tasks
+                </Typography>
+                <List sx={{ 
+                  flexGrow: 1, 
+                  overflow: 'auto', 
+                  px: 2,
+                  '&::-webkit-scrollbar': {
+                    width: '4px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    background: theme.palette.mode === 'dark' 
+                      ? 'rgba(241, 245, 249, 0.1)' 
+                      : '#f1f5f9',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    background: theme.palette.mode === 'dark' 
+                      ? 'rgba(203, 213, 225, 0.3)' 
+                      : '#cbd5e1',
+                    borderRadius: '4px',
+                  },
+                }}>
+                  {upcomingTasks.length > 0 ? (
+                    upcomingTasks.map(task => (
+                      <UpcomingTaskItem 
+                        key={task.id} 
+                        task={task} 
+                        getPriorityColor={getPriorityColor}
+                      />
+                    ))
+                  ) : (
+                    <Box sx={{ 
+                      textAlign: 'center',
+                      py: 4,
+                      color: theme.palette.text.secondary,
+                    }}>
+                      No upcoming tasks
+                    </Box>
+                  )}
+                </List>
+              </StyledPaper>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <StyledPaper elevation={3} sx={{ height: '100%' }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">Task Progress</Typography>
+                <ResponsiveContainer width="100%" height="90%">
+                  <PieChart>
+                    <Pie
+                      data={taskData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {taskData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: theme.palette.background.paper, borderRadius: 8 }} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </StyledPaper>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <StyledPaper elevation={3} sx={{ height: '100%' }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">Task Priorities</Typography>
+                <ResponsiveContainer width="100%" height="90%">
+                  <BarChart data={priorityData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                    <XAxis type="number" stroke={theme.palette.text.secondary} />
+                    <YAxis dataKey="name" type="category" stroke={theme.palette.text.secondary} />
+                    <Tooltip contentStyle={{ backgroundColor: theme.palette.background.paper, borderRadius: 8 }} />
+                    <Legend />
+                    <Bar dataKey="value" fill={theme.palette.primary.main} radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </StyledPaper>
+            </Grid>
+          </Grid>
         </Grid>
       </Grid>
     </Box>
   )
 }
+
+UpcomingTaskItem.propTypes = {
+  task: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    title: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    priority: PropTypes.oneOf(['low', 'medium', 'high']),
+    dueDate: PropTypes.string,
+  }).isRequired,
+  getPriorityColor: PropTypes.func.isRequired,
+};
 
 export default Dashboard
