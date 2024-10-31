@@ -1,6 +1,6 @@
 import React from 'react'
 import { Typography, Grid, Paper, List, ListItem, ListItemText, useTheme, Box, Chip, Avatar } from '@mui/material'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { styled } from '@mui/material/styles'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import FlagIcon from '@mui/icons-material/Flag'
@@ -91,18 +91,10 @@ function Dashboard({ tasks, milestones }) {
     }
   }
 
-  // Mock data for progress over time
-  const progressData = [
-    { name: 'Week 1', tasks: 4, milestones: 1 },
-    { name: 'Week 2', tasks: 7, milestones: 2 },
-    { name: 'Week 3', tasks: 12, milestones: 3 },
-    { name: 'Week 4', tasks: 18, milestones: 4 },
-  ]
-
   return (
     <Box sx={{ 
       flexGrow: 1, 
-      height: 'calc(100vh - 64px)', // Subtract the AppBar height
+      height: 'calc(100vh - 64px)',
       overflow: 'auto', 
       padding: theme.spacing(3),
       backgroundColor: theme.palette.background.default,
@@ -155,22 +147,6 @@ function Dashboard({ tasks, milestones }) {
             trend={3}
           />
         </Grid>
-        <Grid item xs={12} md={8}>
-          <StyledPaper elevation={3} sx={{ height: 400 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Progress Over Time</Typography>
-            <ResponsiveContainer width="100%" height="90%">
-              <LineChart data={progressData}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                <XAxis dataKey="name" stroke={theme.palette.text.secondary} />
-                <YAxis stroke={theme.palette.text.secondary} />
-                <Tooltip contentStyle={{ backgroundColor: theme.palette.background.paper, borderRadius: 8 }} />
-                <Legend />
-                <Line type="monotone" dataKey="tasks" stroke={theme.palette.primary.main} strokeWidth={2} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="milestones" stroke={theme.palette.secondary.main} strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </StyledPaper>
-        </Grid>
         <Grid item xs={12} md={4}>
           <StyledPaper elevation={3} sx={{ height: 400, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Upcoming Tasks</Typography>
@@ -199,7 +175,7 @@ function Dashboard({ tasks, milestones }) {
             </List>
           </StyledPaper>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <StyledPaper elevation={3} sx={{ height: 400 }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Task Progress</Typography>
             <ResponsiveContainer width="100%" height="90%">
@@ -225,7 +201,7 @@ function Dashboard({ tasks, milestones }) {
             </ResponsiveContainer>
           </StyledPaper>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <StyledPaper elevation={3} sx={{ height: 400 }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Task Priorities</Typography>
             <ResponsiveContainer width="100%" height="90%">
