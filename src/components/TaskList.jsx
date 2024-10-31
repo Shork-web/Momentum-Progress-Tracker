@@ -288,14 +288,8 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask }) {
       py: 3,
       overflow: 'hidden',
     }}>
-      <Container maxWidth="xl" sx={{ 
-        height: '100%',
-        overflow: 'hidden'
-      }}>
-        <Grid container spacing={3} sx={{ 
-          height: '100%',
-          overflow: 'hidden'
-        }}>
+      <Container maxWidth="xl" sx={{ height: '100%' }}>
+        <Grid container spacing={3} sx={{ height: '100%' }}>
           {/* Stats Section */}
           <Grid item xs={12}>
             <Grid container spacing={3}>
