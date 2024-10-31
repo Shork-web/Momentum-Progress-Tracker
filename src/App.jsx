@@ -92,17 +92,30 @@ function App() {
   }
 
   const handleLogin = (user) => {
-    setCurrentUser(user)
-    setShowAuth(false)
-  }
+    const savedTasks = localStorage.getItem(`tasks_${user.username}`);
+    const savedMilestones = localStorage.getItem(`milestones_${user.username}`);
+    
+    setTasks(savedTasks ? JSON.parse(savedTasks) : []);
+    setMilestones(savedMilestones ? JSON.parse(savedMilestones) : []);
+    setCurrentUser(user);
+    setShowAuth(false);
+  };
 
   const handleLogout = () => {
+    if (currentUser) {
+      localStorage.setItem(`tasks_${currentUser.username}`, JSON.stringify(tasks));
+      localStorage.setItem(`milestones_${currentUser.username}`, JSON.stringify(milestones));
+    }
+    
     localStorage.removeItem('currentUser');
     localStorage.removeItem('currentTab');
+    
     setCurrentUser(null);
+    setTasks([]);
+    setMilestones([]);
     setShowAuth(true);
     setLogoutDialogOpen(false);
-  }
+  };
 
   const handleSignUp = () => {
     setShowSignUp(false)
