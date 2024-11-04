@@ -144,8 +144,18 @@ function App() {
     };
     const updatedTasks = [...tasks, taskWithId];
     setTasks(updatedTasks);
+
+    // Add new milestones to the milestones state
+    const newMilestones = newTask.milestones;
+    const updatedMilestones = [...milestones, ...newMilestones.map(milestone => ({
+      ...milestone,
+      id: Date.now(),
+    }))];
+    setMilestones(updatedMilestones);
+
     if (currentUser) {
       localStorage.setItem(`tasks_${currentUser.username}`, JSON.stringify(updatedTasks));
+      localStorage.setItem(`milestones_${currentUser.username}`, JSON.stringify(updatedMilestones));
     }
     addNotification('New task added successfully!');
   };

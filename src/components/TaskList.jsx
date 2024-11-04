@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import { useState } from 'react';
 import { 
   Box, 
@@ -24,6 +23,7 @@ import FlagIcon from '@mui/icons-material/Flag';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
+import PropTypes from 'prop-types';
 
 const StatCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2.5),
@@ -50,6 +50,8 @@ const TaskContainer = styled(Box)(({ theme }) => ({
   borderRadius: theme.spacing(2),
   padding: theme.spacing(3),
   height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
   boxShadow: '0 10px 30px 0 rgba(0, 0, 0, 0.1)',
   transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
   '&:hover': {
@@ -134,7 +136,11 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
   );
 
   const TaskSection = ({ title, tasks, type }) => (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+    }}>
       <Typography 
         variant="h6" 
         sx={{ 
@@ -163,20 +169,21 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
       </Typography>
 
       <Box sx={{ 
-        flexGrow: 1,
+        height: '400px',
         overflow: 'auto',
         pr: 1,
-        height: 'calc(100vh - 300px)',
         '&::-webkit-scrollbar': {
           width: '4px',
         },
         '&::-webkit-scrollbar-track': {
           background: theme.palette.mode === 'dark' ? 'rgba(241, 245, 249, 0.1)' : '#f1f5f9',
+          borderRadius: '4px',
         },
         '&::-webkit-scrollbar-thumb': {
           background: theme.palette.mode === 'dark' ? 'rgba(203, 213, 225, 0.3)' : '#cbd5e1',
           borderRadius: '4px',
         },
+        mr: -1,
       }}>
         {tasks.map((task) => (
           <TaskCard key={task.id} elevation={0}>
@@ -283,38 +290,47 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
 
   return (
     <Box sx={{ 
-      height: '100vh',
-      backgroundColor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#f8fafc',
-      py: 3,
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
       overflow: 'hidden',
+      backgroundColor: theme.palette.background.default,
     }}>
-      <Container maxWidth="xl" sx={{ height: '100%' }}>
-        <Grid container spacing={3} sx={{ height: '100%' }}>
+      <Container maxWidth="xl" sx={{ 
+        flexGrow: 1, 
+        display: 'flex', 
+        flexDirection: 'column',
+        py: 3,
+        px: { xs: 2, sm: 3 },
+        height: '100%',
+        overflow: 'hidden',
+      }}>
+        <Grid container spacing={3} sx={{ flexGrow: 1, minHeight: 0 }}>
           {/* Stats Section */}
           <Grid item xs={12}>
             <Grid container spacing={3}>
               <Grid item xs={12} md={4}>
                 <StatCardContent
-                  icon={<AssignmentIcon />}
+                  icon={<AssignmentIcon fontSize="large" />}
                   title="Total Tasks"
                   value={tasks.length}
-                  color="#0ea5e9"
+                  color={theme.palette.primary.main}
                 />
               </Grid>
               <Grid item xs={12} md={4}>
                 <StatCardContent
-                  icon={<CheckCircleOutlineIcon />}
+                  icon={<CheckCircleOutlineIcon fontSize="large" />}
                   title="Completed Tasks"
                   value={tasks.filter(task => task.completed).length}
-                  color="#22c55e"
+                  color={theme.palette.success.main}
                 />
               </Grid>
               <Grid item xs={12} md={4}>
                 <StatCardContent
-                  icon={<PendingActionsIcon />}
+                  icon={<PendingActionsIcon fontSize="large" />}
                   title="Active Tasks"
                   value={tasks.filter(task => !task.completed).length}
-                  color="#f59e0b"
+                  color={theme.palette.warning.main}
                 />
               </Grid>
             </Grid>
@@ -322,11 +338,19 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
 
           {/* Tasks Section */}
           <Grid item xs={12} sx={{ 
-            height: 'calc(100vh - 200px)',
-            overflow: 'hidden'
+            flexGrow: 1,
+            minHeight: 0,
+            width: '100%'
           }}>
-            <Grid container spacing={3} sx={{ height: '100%' }}>
-              <Grid item xs={12} md={6} sx={{ height: '100%' }}>
+            <Grid container spacing={3} sx={{ 
+              height: '100%',
+              margin: 0,
+              width: '100%',
+            }}>
+              <Grid item xs={12} md={6} sx={{ 
+                height: '100%',
+                paddingTop: '0 !important'
+              }}>
                 <TaskContainer>
                   <TaskSection 
                     title="Active Tasks" 
@@ -335,7 +359,10 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                   />
                 </TaskContainer>
               </Grid>
-              <Grid item xs={12} md={6} sx={{ height: '100%' }}>
+              <Grid item xs={12} md={6} sx={{ 
+                height: '100%',
+                paddingTop: '0 !important'
+              }}>
                 <TaskContainer>
                   <TaskSection 
                     title="Completed" 
@@ -398,14 +425,7 @@ TaskList.propTypes = {
   onToggleTask: PropTypes.func.isRequired,
   onDeleteTask: PropTypes.func.isRequired,
   onAddTask: PropTypes.func.isRequired,
-  milestones: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.number.isRequired,
-      title: PropTypes.string.isRequired,
-      description: PropTypes.string,
-      dueDate: PropTypes.string,
-    })
-  ).isRequired,
+  milestones: PropTypes.array.isRequired,
 };
 
 export default TaskList;
