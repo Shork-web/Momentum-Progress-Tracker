@@ -138,7 +138,11 @@ function App() {
   }
 
   const handleAddTask = (newTask) => {
-    const updatedTasks = [...tasks, newTask];
+    const taskWithId = {
+      ...newTask,
+      id: Date.now(), // Ensure unique ID using timestamp
+    };
+    const updatedTasks = [...tasks, taskWithId];
     setTasks(updatedTasks);
     if (currentUser) {
       localStorage.setItem(`tasks_${currentUser.username}`, JSON.stringify(updatedTasks));
@@ -157,8 +161,12 @@ function App() {
   };
 
   const handleDeleteTask = (taskId) => {
+    const taskToDelete = tasks.find(task => task.id === taskId);
+    if (!taskToDelete) return; // If task not found, do nothing
+    
     const updatedTasks = tasks.filter(task => task.id !== taskId);
     setTasks(updatedTasks);
+    
     if (currentUser) {
       localStorage.setItem(`tasks_${currentUser.username}`, JSON.stringify(updatedTasks));
     }
@@ -311,6 +319,7 @@ function App() {
               onToggleTask={handleToggleTask}
               onDeleteTask={handleDeleteTask}
               onAddTask={handleAddTask}
+              milestones={milestones}
             />
           </TabPanel>
           <TabPanel value={tabValue} index={2}>

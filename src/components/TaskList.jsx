@@ -92,7 +92,7 @@ const priorityColors = {
   high: '#ef4444'
 };
 
-function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask }) {
+function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -378,6 +378,7 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask }) {
         open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         onAddTask={onAddTask}
+        existingMilestones={milestones}
       />
     </Box>
   );
@@ -396,7 +397,15 @@ TaskList.propTypes = {
   ).isRequired,
   onToggleTask: PropTypes.func.isRequired,
   onDeleteTask: PropTypes.func.isRequired,
-  onAddTask: PropTypes.func.isRequired
+  onAddTask: PropTypes.func.isRequired,
+  milestones: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      title: PropTypes.string.isRequired,
+      description: PropTypes.string,
+      dueDate: PropTypes.string,
+    })
+  ).isRequired,
 };
 
 export default TaskList;

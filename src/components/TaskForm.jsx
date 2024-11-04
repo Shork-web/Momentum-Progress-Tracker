@@ -13,8 +13,13 @@ import {
   MenuItem,
   Box,
   useTheme,
-  styled
+  styled,
+  IconButton,
+  Tooltip,
+  Typography,
+  Divider
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
@@ -104,22 +109,35 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   },
 }));
 
-function TaskForm({ open, onClose, onAddTask }) {
+function TaskForm({ open, onClose, onAddTask, existingMilestones = [] }) {
   const theme = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
-  const [milestone, setMilestone] = useState('');
+  const [selectedMilestone, setSelectedMilestone] = useState('');
+  const [showNewMilestoneFields, setShowNewMilestoneFields] = useState(false);
+  const [newMilestone, setNewMilestone] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const milestoneData = showNewMilestoneFields ? {
+      title: newMilestone.title,
+      description: newMilestone.description,
+      dueDate: newMilestone.dueDate,
+      isNew: true
+    } : selectedMilestone;
+
     onAddTask({
       title,
       description,
       priority,
       dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-      milestone,
+      milestone: milestoneData,
     });
     handleClose();
   };
@@ -127,10 +145,17 @@ function TaskForm({ open, onClose, onAddTask }) {
   const handleClose = () => {
     setTitle('');
     setDescription('');
-    setPriority('');
+    setPriority('medium');
     setDueDate('');
-    setMilestone('');
+    setSelectedMilestone('');
+    setShowNewMilestoneFields(false);
+    setNewMilestone({ title: '', description: '', dueDate: '' });
     onClose();
+  };
+
+  const toggleNewMilestoneFields = () => {
+    setShowNewMilestoneFields(!showNewMilestoneFields);
+    setSelectedMilestone('');
   };
 
   return (
@@ -165,15 +190,6 @@ function TaskForm({ open, onClose, onAddTask }) {
             fullWidth
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-          <StyledTextField
-            label="Milestone"
-            fullWidth
-            multiline
-            rows={3}
-            value={milestone}
-            onChange={(e) => setMilestone(e.target.value)}
             required
           />
           <StyledTextField
@@ -216,6 +232,80 @@ function TaskForm({ open, onClose, onAddTask }) {
             }}
             required
           />
+
+          <Divider sx={{ my: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Milestone
+            </Typography>
+          </Divider>
+
+          {!showNewMilestoneFields ? (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <FormControl fullWidth>
+                <InputLabel>Select Milestone</InputLabel>
+                <StyledSelect
+                  value={selectedMilestone}
+                  label="Select Milestone"
+                  onChange={(e) => setSelectedMilestone(e.target.value)}
+                >
+                  {existingMilestones.map((milestone) => (
+                    <MenuItem key={milestone.id} value={milestone.id}>
+                      {milestone.title}
+                    </MenuItem>
+                  ))}
+                </StyledSelect>
+              </FormControl>
+              <Tooltip title="Create New Milestone">
+                <IconButton 
+                  onClick={toggleNewMilestoneFields}
+                  sx={{ 
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(25, 118, 210, 0.04)',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.12)' : 'rgba(25, 118, 210, 0.08)',
+                    }
+                  }}
+                >
+                  <AddIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <StyledTextField
+                label="Milestone Title"
+                fullWidth
+                value={newMilestone.title}
+                onChange={(e) => setNewMilestone({ ...newMilestone, title: e.target.value })}
+                required={showNewMilestoneFields}
+              />
+              <StyledTextField
+                label="Milestone Description"
+                fullWidth
+                multiline
+                rows={2}
+                value={newMilestone.description}
+                onChange={(e) => setNewMilestone({ ...newMilestone, description: e.target.value })}
+              />
+              <StyledTextField
+                type="date"
+                label="Milestone Due Date"
+                fullWidth
+                value={newMilestone.dueDate}
+                onChange={(e) => setNewMilestone({ ...newMilestone, dueDate: e.target.value })}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                required={showNewMilestoneFields}
+              />
+              <Button
+                size="small"
+                onClick={toggleNewMilestoneFields}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                Back to Existing Milestones
+              </Button>
+            </Box>
+          )}
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
@@ -255,6 +345,14 @@ TaskForm.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onAddTask: PropTypes.func.isRequired,
+  existingMilestones: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      title: PropTypes.string.isRequired,
+      description: PropTypes.string,
+      dueDate: PropTypes.string,
+    })
+  ),
 };
 
 export default TaskForm;
