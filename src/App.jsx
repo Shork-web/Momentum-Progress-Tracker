@@ -1,20 +1,35 @@
-import { useState, useEffect } from 'react'
-import { ThemeProvider, createTheme, styled } from '@mui/material/styles'
-import CssBaseline from '@mui/material/CssBaseline'
-import { Box, Typography, Tabs, Tab, AppBar, Toolbar, IconButton, useMediaQuery, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material'
-import Brightness4Icon from '@mui/icons-material/Brightness4'
-import Brightness7Icon from '@mui/icons-material/Brightness7'
-import TaskList from './components/TaskList'
-import MilestoneTracker from './components/MilestoneTracker'
-import NotificationCenter from './components/NotificationCenter'
-import Dashboard from './components/Dashboard'
-import TabPanel, { StyledTabs, a11yProps } from './components/TabPanel'
-import LandingPage from './components/LandingPage'
-import Login from './components/Login'
-import SignUp from './components/Signup'
-import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined'
-import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
-import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined'
+import { useState, useEffect } from 'react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { 
+  Box, 
+  Typography, 
+  Tabs, 
+  Tab, 
+  AppBar, 
+  Toolbar, 
+  IconButton, 
+  useMediaQuery, 
+  Button, 
+  Dialog, 
+  DialogActions, 
+  DialogContent, 
+  DialogContentText, 
+  DialogTitle 
+} from '@mui/material';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
+import TaskList from './components/TaskList';
+import MilestoneTracker from './components/MilestoneTracker';
+import NotificationCenter from './components/NotificationCenter';
+import Dashboard from './components/Dashboard';
+import TabPanel, { StyledTabs, a11yProps } from './components/TabPanel';
+import LandingPage from './components/LandingPage';
+import Login from './components/Login';
+import SignUp from './components/Signup';
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 
 function App() {
   const [tasks, setTasks] = useState(() => {
@@ -35,20 +50,20 @@ function App() {
     return [];
   });
 
-  const [notifications, setNotifications] = useState([])
+  const [notifications, setNotifications] = useState([]);
   const [tabValue, setTabValue] = useState(() => {
     const savedTab = localStorage.getItem('currentTab');
     return savedTab ? parseInt(savedTab) : 0;
   });
-  const [mode, setMode] = useState('light')
+  const [mode, setMode] = useState('light');
   const [currentUser, setCurrentUser] = useState(() => {
     const savedUser = localStorage.getItem('currentUser');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [showSignUp, setShowSignUp] = useState(false)
-  const [showAuth, setShowAuth] = useState(false)
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false) // New state for logout dialog
-  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)')
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 
   const theme = createTheme({
     palette: {
@@ -73,23 +88,23 @@ function App() {
         },
       },
     },
-  })
+  });
 
   const addNotification = (message) => {
-    setNotifications(prev => [...prev, { id: Date.now(), message }])
-  }
+    setNotifications(prev => [...prev, { id: Date.now(), message }]);
+  };
 
   const handleTabChange = (event, newValue) => {
-    setTabValue(newValue)
-  }
+    setTabValue(newValue);
+  };
 
   const toggleColorMode = () => {
-    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'))
-  }
+    setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+  };
 
   const handleGetStarted = () => {
-    setShowAuth(true)
-  }
+    setShowAuth(true);
+  };
 
   const handleLogin = (user) => {
     const savedTasks = localStorage.getItem(`tasks_${user.username}`);
@@ -118,34 +133,33 @@ function App() {
   };
 
   const handleSignUp = () => {
-    setShowSignUp(false)
-  }
+    setShowSignUp(false);
+  };
 
   const handleToggleSignUp = () => {
-    setShowSignUp(true)
-  }
+    setShowSignUp(true);
+  };
 
   const handleToggleLogin = () => {
-    setShowSignUp(false)
-  }
+    setShowSignUp(false);
+  };
 
   const openLogoutDialog = () => {
-    setLogoutDialogOpen(true)
-  }
+    setLogoutDialogOpen(true);
+  };
 
   const closeLogoutDialog = () => {
-    setLogoutDialogOpen(false)
-  }
+    setLogoutDialogOpen(false);
+  };
 
   const handleAddTask = (newTask) => {
     const taskWithId = {
       ...newTask,
-      id: Date.now(), // Ensure unique ID using timestamp
+      id: Date.now(),
     };
     const updatedTasks = [...tasks, taskWithId];
     setTasks(updatedTasks);
 
-    // Add new milestones to the milestones state
     const newMilestones = newTask.milestones;
     const updatedMilestones = [...milestones, ...newMilestones.map(milestone => ({
       ...milestone,
@@ -172,7 +186,7 @@ function App() {
 
   const handleDeleteTask = (taskId) => {
     const taskToDelete = tasks.find(task => task.id === taskId);
-    if (!taskToDelete) return; // If task not found, do nothing
+    if (!taskToDelete) return;
     
     const updatedTasks = tasks.filter(task => task.id !== taskId);
     setTasks(updatedTasks);
@@ -202,16 +216,16 @@ function App() {
     }
   }, [currentUser]);
 
-  if (!currentUser) {
-    if (!showAuth) {
-      return (
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <LandingPage onGetStarted={handleGetStarted} />
-        </ThemeProvider>
-      )
-    }
+  if (!currentUser && !showAuth) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <LandingPage onGetStarted={handleGetStarted} />
+      </ThemeProvider>
+    );
+  }
 
+  if (showAuth) {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
@@ -221,10 +235,18 @@ function App() {
           <Login onLogin={handleLogin} onToggleSignUp={handleToggleSignUp} />
         )}
       </ThemeProvider>
-    )
+    );
   }
 
-  // Render the dashboard when the user is logged in
+  if (!currentUser) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <LandingPage onGetStarted={handleGetStarted} />
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -342,7 +364,6 @@ function App() {
         </Box>
       </Box>
 
-      {/* Logout Confirmation Dialog */}
       <Dialog
         open={logoutDialogOpen}
         onClose={closeLogoutDialog}
@@ -365,7 +386,7 @@ function App() {
         </DialogActions>
       </Dialog>
     </ThemeProvider>
-  )
+  );
 }
 
-export default App
+export default App;

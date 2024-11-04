@@ -78,14 +78,48 @@ function Login({ onLogin, onToggleSignUp }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
 
   const handleLogin = () => {
+    if (!username || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
     const users = JSON.parse(localStorage.getItem('users')) || [];
-    const user = users.find((u) => u.username === username && u.password === password);
+    const user = users.find(u => u.username === username && u.password === password);
+
     if (user) {
-      onLogin(user);
+      // Create a sanitized user object without password
+      const sanitizedUser = {
+        username: user.username,
+        id: user.id,
+        createdAt: user.createdAt,
+        lastLogin: new Date().toISOString()
+      };
+
+      // Update last login time
+      const updatedUsers = users.map(u => 
+        u.username === username 
+          ? { ...u, lastLogin: new Date().toISOString() }
+          : u
+      );
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+
+      // Load user's tasks and milestones
+      const tasks = localStorage.getItem(`tasks_${username}`);
+      const milestones = localStorage.getItem(`milestones_${username}`);
+
+      if (!tasks) {
+        localStorage.setItem(`tasks_${username}`, JSON.stringify([]));
+      }
+      if (!milestones) {
+        localStorage.setItem(`milestones_${username}`, JSON.stringify([]));
+      }
+
+      onLogin(sanitizedUser);
     } else {
-      alert('Invalid username or password');
+      setError('Invalid username or password');
     }
   };
 
@@ -193,6 +227,18 @@ function Login({ onLogin, onToggleSignUp }) {
               </Button>
             </Typography>
           </Grid>
+          {error && (
+            <Grid item xs={12}>
+              <Typography 
+                color="error" 
+                variant="body2" 
+                align="center"
+                sx={{ mt: 1 }}
+              >
+                {error}
+              </Typography>
+            </Grid>
+          )}
         </Grid>
       </StyledPaper>
     </GradientBackground>

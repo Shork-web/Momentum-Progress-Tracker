@@ -22,7 +22,7 @@ const GradientBackground = styled(Box)(({ theme }) => ({
     #20c997,
     #17a2b8)`,
   backgroundSize: '400% 400%',
-  animation: `${gradientAnimation} 15s ease infinite`, // Ensure 'infinite' is present
+  animation: `${gradientAnimation} 15s ease infinite`, 
   minHeight: '100vh',
   display: 'flex',
   flexDirection: 'column',

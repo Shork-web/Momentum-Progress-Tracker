@@ -80,12 +80,37 @@ function SignUp({ onSignUp, onToggleLogin }) {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSignUp = () => {
+    if (!username || !password) {
+      alert('Please fill in all fields');
+      return;
+    }
+
     const users = JSON.parse(localStorage.getItem('users')) || [];
-    const newUser = { username, password };
+    
+    // Check if username already exists
+    if (users.some(user => user.username === username)) {
+      alert('Username already exists. Please choose another one.');
+      return;
+    }
+
+    // Create new user with additional metadata
+    const newUser = { 
+      username, 
+      password,
+      createdAt: new Date().toISOString(),
+      id: Date.now()
+    };
+
+    // Add new user to users array and save to localStorage
     users.push(newUser);
     localStorage.setItem('users', JSON.stringify(users));
+    
+    // Initialize empty tasks and milestones arrays for new user
+    localStorage.setItem(`tasks_${username}`, JSON.stringify([]));
+    localStorage.setItem(`milestones_${username}`, JSON.stringify([]));
+    
     onSignUp();
-    alert('User registered successfully!');
+    alert('Account created successfully! Please log in.');
   };
 
   return (
