@@ -209,7 +209,8 @@ function Dashboard({ tasks, milestones }) {
               <Grid item xs={12} lg={4}>
                 <StyledPaper sx={{ 
                   height: '100%',
-                  minHeight: 450,
+                  minHeight: { xs: '400px', lg: '450px' },
+                  maxHeight: { xs: '400px', lg: '450px' },
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
@@ -221,6 +222,8 @@ function Dashboard({ tasks, milestones }) {
                   <Box sx={{ 
                     flexGrow: 1,
                     overflow: 'auto',
+                    height: '100%',
+                    maxHeight: 'calc(100% - 40px)',
                     '&::-webkit-scrollbar': {
                       width: '4px',
                     },
@@ -235,12 +238,16 @@ function Dashboard({ tasks, milestones }) {
                     pr: 1,
                     mr: -1,
                   }}>
-                    <List sx={{ py: 0 }}>
-                      {upcomingTasks.map((task) => (
+                    <List sx={{ 
+                      py: 0,
+                      display: 'grid',
+                      gridTemplateRows: 'repeat(auto-fill, minmax(80px, 1fr))',
+                      gap: 1,
+                    }}>
+                      {upcomingTasks.slice(0, 4).map((task) => (
                         <ListItem 
                           key={task.id}
                           sx={{ 
-                            mb: 1,
                             p: 1.5,
                             borderRadius: 2,
                             backgroundColor: theme.palette.mode === 'dark' 
@@ -253,6 +260,8 @@ function Dashboard({ tasks, milestones }) {
                                 ? '0 4px 12px rgba(0, 0, 0, 0.3)'
                                 : '0 4px 12px rgba(0, 0, 0, 0.1)',
                             },
+                            height: '80px',
+                            mb: 0,
                           }}
                         >
                           <ListItemText
@@ -260,7 +269,12 @@ function Dashboard({ tasks, milestones }) {
                               <Typography 
                                 variant="subtitle2" 
                                 fontWeight="medium"
-                                sx={{ mb: 1 }}
+                                sx={{ 
+                                  mb: 1,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
                               >
                                 {task.title}
                               </Typography>
@@ -286,22 +300,91 @@ function Dashboard({ tasks, milestones }) {
                           />
                         </ListItem>
                       ))}
-                      {upcomingTasks.length === 0 && (
+                      {upcomingTasks.length > 4 && (
                         <Box sx={{ 
+                          p: 1.5, 
                           textAlign: 'center',
-                          py: 4,
-                          color: theme.palette.text.secondary,
+                          color: theme.palette.primary.main,
+                          fontWeight: 500,
+                          fontSize: '0.875rem',
                         }}>
-                          No upcoming tasks
+                          Scroll to see {upcomingTasks.length - 4} more tasks
                         </Box>
                       )}
+                      {upcomingTasks.slice(4).map((task) => (
+                        <ListItem 
+                          key={task.id}
+                          sx={{ 
+                            p: 1.5,
+                            borderRadius: 2,
+                            backgroundColor: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.05)'
+                              : 'rgba(0, 0, 0, 0.02)',
+                            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                            '&:hover': {
+                              transform: 'translateY(-2px)',
+                              boxShadow: theme.palette.mode === 'dark'
+                                ? '0 4px 12px rgba(0, 0, 0, 0.3)'
+                                : '0 4px 12px rgba(0, 0, 0, 0.1)',
+                            },
+                            height: '80px',
+                            mb: 0,
+                          }}
+                        >
+                          <ListItemText
+                            primary={
+                              <Typography 
+                                variant="subtitle2" 
+                                fontWeight="medium"
+                                sx={{ 
+                                  mb: 1,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {task.title}
+                              </Typography>
+                            }
+                            secondary={
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                {task.dueDate && (
+                                  <Chip
+                                    icon={<CalendarTodayIcon sx={{ fontSize: '0.875rem' }} />}
+                                    label={formatDate(task.dueDate)}
+                                    size="small"
+                                    sx={{ 
+                                      height: 24,
+                                      backgroundColor: theme.palette.mode === 'dark' 
+                                        ? 'rgba(241, 245, 249, 0.1)'
+                                        : '#f8fafc',
+                                      color: theme.palette.text.secondary,
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            }
+                          />
+                        </ListItem>
+                      ))}
                     </List>
+                    {upcomingTasks.length === 0 && (
+                      <Box sx={{ 
+                        textAlign: 'center',
+                        py: 4,
+                        color: theme.palette.text.secondary,
+                      }}>
+                        No upcoming tasks
+                      </Box>
+                    )}
                   </Box>
                 </StyledPaper>
               </Grid>
               <Grid item xs={12} sm={6} lg={4}>
                 <StyledPaper sx={{ 
-                  minHeight: 450,
+                  height: '100%',
+                  minHeight: { xs: '400px', lg: '450px' },
+                  maxHeight: { xs: '400px', lg: '450px' },
                   p: 2,
                 }}>
                   <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 2 }}>
@@ -334,12 +417,36 @@ function Dashboard({ tasks, milestones }) {
               </Grid>
               <Grid item xs={12} sm={6} lg={4}>
                 <StyledPaper sx={{ 
-                  minHeight: 450,
+                  height: '100%',
+                  minHeight: { xs: '400px', lg: '450px' },
+                  maxHeight: { xs: '400px', lg: '450px' },
                   p: 2,
                 }}>
-                  <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 2 }}>
-                    Milestone Progress
-                  </Typography>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    mb: 2 
+                  }}>
+                    <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 0 }}>
+                      Milestone Progress
+                    </Typography>
+                    <Chip
+                      label={`${Math.round((milestoneStatus.completed / milestones.length) * 100)}% Complete`}
+                      color="success"
+                      size="small"
+                      icon={<CheckCircleOutlineIcon />}
+                      sx={{ 
+                        fontWeight: 500,
+                        backgroundColor: theme.palette.mode === 'dark' 
+                          ? 'rgba(34, 197, 94, 0.2)' 
+                          : 'rgba(34, 197, 94, 0.1)',
+                        color: theme.palette.mode === 'dark' 
+                          ? theme.palette.success.light 
+                          : theme.palette.success.dark,
+                      }}
+                    />
+                  </Box>
                   <Box sx={{ height: 'calc(100% - 40px)', minHeight: 350 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={milestoneData} layout="vertical">
@@ -391,28 +498,6 @@ function Dashboard({ tasks, milestones }) {
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
-                  </Box>
-                  <Box sx={{ 
-                    mt: 2, 
-                    display: 'flex', 
-                    justifyContent: 'center',
-                    gap: 2 
-                  }}>
-                    <Chip
-                      label={`${Math.round((milestoneStatus.completed / milestones.length) * 100)}% Complete`}
-                      color="success"
-                      size="small"
-                      icon={<CheckCircleOutlineIcon />}
-                      sx={{ 
-                        fontWeight: 500,
-                        backgroundColor: theme.palette.mode === 'dark' 
-                          ? 'rgba(34, 197, 94, 0.2)' 
-                          : 'rgba(34, 197, 94, 0.1)',
-                        color: theme.palette.mode === 'dark' 
-                          ? theme.palette.success.light 
-                          : theme.palette.success.dark,
-                      }}
-                    />
                   </Box>
                 </StyledPaper>
               </Grid>

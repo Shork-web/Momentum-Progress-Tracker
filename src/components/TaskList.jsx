@@ -1,18 +1,7 @@
 import { useState } from 'react';
 import { 
-  Box, 
-  Typography, 
-  Checkbox, 
-  IconButton, 
-  Fab,
-  Tooltip,
-  Chip,
-  Avatar,
-  Grid,
-  useTheme,
-  Paper,
-  useMediaQuery,
-  Container
+  Box, Typography, Checkbox, IconButton, Fab, Tooltip, Chip,
+  Avatar, Grid, useTheme, Paper, useMediaQuery, Container, List, ListItem, ListItemIcon, ListItemText, ListItemSecondaryAction, Button
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -23,7 +12,25 @@ import FlagIcon from '@mui/icons-material/Flag';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
+import EditIcon from '@mui/icons-material/Edit';
 import PropTypes from 'prop-types';
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderRadius: theme.spacing(2),
+  boxShadow: '0 10px 30px 0 rgba(0, 0, 0, 0.1)',
+  background: theme.palette.mode === 'dark' 
+    ? 'linear-gradient(145deg, #2c2c2c 30%, #3a3a3a 90%)'
+    : 'linear-gradient(145deg, #f0f0f0 30%, #ffffff 90%)',
+  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  '&:hover': {
+    transform: 'translateY(-5px)',
+    boxShadow: '0 15px 40px 0 rgba(0, 0, 0, 0.2)',
+  },
+}));
 
 const StatCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2.5),
@@ -39,22 +46,6 @@ const StatCard = styled(Paper)(({ theme }) => ({
   transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
   '&:hover': {
     transform: 'translateY(-5px)',
-    boxShadow: '0 15px 40px 0 rgba(0, 0, 0, 0.2)',
-  },
-}));
-
-const TaskContainer = styled(Box)(({ theme }) => ({
-  background: theme.palette.mode === 'dark' 
-    ? 'linear-gradient(145deg, #2c2c2c 30%, #3a3a3a 90%)'
-    : 'linear-gradient(145deg, #f0f0f0 30%, #ffffff 90%)',
-  borderRadius: theme.spacing(2),
-  padding: theme.spacing(3),
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  boxShadow: '0 10px 30px 0 rgba(0, 0, 0, 0.1)',
-  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
-  '&:hover': {
     boxShadow: '0 15px 40px 0 rgba(0, 0, 0, 0.2)',
   },
 }));
@@ -78,26 +69,41 @@ const TaskCard = styled(Paper)(({ theme }) => ({
   },
 }));
 
-const PriorityIndicator = styled(Box)(({ priority }) => ({
-  position: 'absolute',
-  left: 0,
-  top: 0,
-  bottom: 0,
-  width: '4px',
-  backgroundColor: priority === 'high' ? '#ef4444' : 
-                  priority === 'medium' ? '#f59e0b' : '#22c55e',
-}));
-
+// Add this constant for priority colors
 const priorityColors = {
-  low: '#22c55e',
-  medium: '#f59e0b',
-  high: '#ef4444'
+  high: {
+    light: '#ef4444',  // red
+    dark: '#dc2626',
+    bg: 'rgba(239, 68, 68, 0.1)'
+  },
+  medium: {
+    light: '#f59e0b',  // amber
+    dark: '#d97706',
+    bg: 'rgba(245, 158, 11, 0.1)'
+  },
+  low: {
+    light: '#22c55e',  // green
+    dark: '#16a34a',
+    bg: 'rgba(34, 197, 94, 0.1)'
+  }
 };
 
 function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Add this state to track expanded descriptions
+  const [expandedTasks, setExpandedTasks] = useState({});
+
+  // Add this handler to toggle description expansion
+  const toggleDescription = (taskId) => {
+    setExpandedTasks(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId]
+    }));
+  };
 
   const formatDate = (dateString) => {
     const options = { month: 'short', day: 'numeric' };
@@ -135,28 +141,32 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
     </StatCard>
   );
 
+  const handleEditTask = (task) => {
+    if (task.completed) {
+      return;
+    }
+    setEditingTask(task);
+    setIsFormOpen(true);
+  };
+
   const TaskSection = ({ title, tasks, type }) => (
     <Box sx={{ 
-      height: '100%', 
-      display: 'flex', 
+      height: '100%',
+      display: 'flex',
       flexDirection: 'column',
     }}>
       <Typography 
         variant="h6" 
-        sx={{ 
-          mb: 3,
-          color: theme.palette.text.primary,
-          fontWeight: 600,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}
+        gutterBottom 
+        fontWeight="bold" 
+        sx={{ px: 1, mb: 1 }}
       >
         {title}
         <Chip 
           label={tasks.length}
           size="small"
           sx={{ 
+            ml: 1,
             backgroundColor: type === 'completed' 
               ? theme.palette.mode === 'dark' ? 'rgba(226, 232, 240, 0.1)' : '#e2e8f0'
               : theme.palette.mode === 'dark' ? 'rgba(224, 242, 254, 0.1)' : '#e0f2fe',
@@ -169,9 +179,9 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
       </Typography>
 
       <Box sx={{ 
-        height: '400px',
+        flexGrow: 1,
+        height: { xs: '400px', md: 'calc(100vh - 350px)' },
         overflow: 'auto',
-        pr: 1,
         '&::-webkit-scrollbar': {
           width: '4px',
         },
@@ -183,13 +193,32 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
           background: theme.palette.mode === 'dark' ? 'rgba(203, 213, 225, 0.3)' : '#cbd5e1',
           borderRadius: '4px',
         },
+        pr: 1,
         mr: -1,
       }}>
-        {tasks.map((task) => (
-          <TaskCard key={task.id} elevation={0}>
-            <PriorityIndicator priority={task.priority} />
-            <Box sx={{ pl: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+        <List sx={{ py: 0 }}>
+          {tasks.map((task) => (
+            <ListItem 
+              key={task.id}
+              sx={{ 
+                mb: 1,
+                p: 1.5,
+                borderRadius: 2,
+                backgroundColor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.05)'
+                  : 'rgba(0, 0, 0, 0.02)',
+                borderLeft: !task.completed ? `4px solid ${priorityColors[task.priority || 'low'].light}` : 'none',
+                transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme.palette.mode === 'dark'
+                    ? '0 4px 12px rgba(0, 0, 0, 0.3)'
+                    : '0 4px 12px rgba(0, 0, 0, 0.1)',
+                },
+                position: 'relative',
+              }}
+            >
+              <ListItemIcon>
                 <Checkbox
                   checked={task.completed}
                   onChange={() => onToggleTask(task.id)}
@@ -200,41 +229,85 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                     },
                   }}
                 />
-                <Box sx={{ flexGrow: 1, mr: 1 }}>
-                  <Typography
-                    sx={{
-                      fontWeight: 500,
-                      color: task.completed 
-                        ? theme.palette.text.secondary
-                        : theme.palette.text.primary,
-                      textDecoration: task.completed ? 'line-through' : 'none',
-                      mb: task.description ? 1 : 0,
-                    }}
-                  >
-                    {task.title}
-                  </Typography>
-                  {task.description && (
+              </ListItemIcon>
+              <ListItemText
+                primary={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Typography 
-                      variant="body2" 
+                      variant="subtitle2" 
+                      fontWeight="medium"
                       sx={{ 
-                        color: theme.palette.text.secondary,
-                        mb: 1.5,
+                        textDecoration: task.completed ? 'line-through' : 'none',
+                        color: task.completed 
+                          ? theme.palette.text.secondary
+                          : theme.palette.text.primary,
                       }}
                     >
-                      {task.description}
+                      {task.title}
                     </Typography>
-                  )}
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 0.5,
-                      color: priorityColors[task.priority],
-                      fontSize: '0.75rem',
-                    }}>
-                      <FlagIcon sx={{ fontSize: '0.875rem' }} />
-                      {task.priority}
-                    </Box>
+                    {!task.completed && (
+                      <Chip
+                        label={task.priority || 'low'}
+                        size="small"
+                        sx={{ 
+                          height: 20,
+                          backgroundColor: priorityColors[task.priority || 'low'].bg,
+                          color: priorityColors[task.priority || 'low'].light,
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          '& .MuiChip-label': {
+                            px: 1,
+                          },
+                        }}
+                      />
+                    )}
+                  </Box>
+                }
+                secondary={
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {task.description && (
+                      <Box sx={{ position: 'relative' }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: expandedTasks[task.id] ? 'unset' : 2,
+                            WebkitBoxOrient: 'vertical',
+                            cursor: 'pointer',
+                            pr: 6, // Make room for action buttons
+                            '&:hover': {
+                              color: theme.palette.text.primary,
+                            },
+                            transition: 'all 0.2s ease',
+                          }}
+                          onClick={() => toggleDescription(task.id)}
+                        >
+                          {task.description}
+                        </Typography>
+                        {task.description.length > 120 && (
+                          <Button
+                            size="small"
+                            onClick={() => toggleDescription(task.id)}
+                            sx={{ 
+                              textTransform: 'none',
+                              minWidth: 'auto',
+                              p: 0.5,
+                              mt: 0.5,
+                              color: theme.palette.text.secondary,
+                              '&:hover': {
+                                backgroundColor: 'transparent',
+                                color: theme.palette.primary.main,
+                              }
+                            }}
+                          >
+                            {expandedTasks[task.id] ? 'Show less' : 'Show more'}
+                          </Button>
+                        )}
+                      </Box>
+                    )}
                     {task.dueDate && (
                       <Chip
                         icon={<CalendarTodayIcon sx={{ fontSize: '0.875rem' }} />}
@@ -242,20 +315,42 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                         size="small"
                         sx={{ 
                           height: 24,
+                          width: 'fit-content',
                           backgroundColor: theme.palette.mode === 'dark' 
                             ? 'rgba(241, 245, 249, 0.1)'
                             : '#f8fafc',
                           color: theme.palette.text.secondary,
-                          '& .MuiChip-label': { px: 1 },
-                          '& .MuiChip-icon': { 
-                            ml: 1,
-                            color: theme.palette.text.secondary,
-                          },
                         }}
                       />
                     )}
                   </Box>
-                </Box>
+                }
+              />
+              <ListItemSecondaryAction sx={{ 
+                display: 'flex', 
+                gap: 1,
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                transform: 'none',
+              }}>
+                {!task.completed && (
+                  <IconButton 
+                    onClick={() => handleEditTask(task)}
+                    size="small"
+                    sx={{ 
+                      color: theme.palette.mode === 'dark' ? '#475569' : '#cbd5e1',
+                      '&:hover': { 
+                        color: theme.palette.primary.main,
+                        backgroundColor: theme.palette.mode === 'dark' 
+                          ? 'rgba(14, 165, 233, 0.1)'
+                          : 'rgba(14, 165, 233, 0.1)',
+                      }
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                )}
                 <IconButton 
                   onClick={() => onDeleteTask(task.id)}
                   size="small"
@@ -271,10 +366,10 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                 >
                   <DeleteIcon fontSize="small" />
                 </IconButton>
-              </Box>
-            </Box>
-          </TaskCard>
-        ))}
+              </ListItemSecondaryAction>
+            </ListItem>
+          ))}
+        </List>
         {tasks.length === 0 && (
           <Box sx={{ 
             textAlign: 'center',
@@ -300,16 +395,16 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
         flexGrow: 1, 
         display: 'flex', 
         flexDirection: 'column',
-        py: 3,
-        px: { xs: 2, sm: 3 },
+        py: 2,
+        px: { xs: 2, sm: 2 },
         height: '100%',
         overflow: 'hidden',
       }}>
-        <Grid container spacing={3} sx={{ flexGrow: 1, minHeight: 0 }}>
+        <Grid container spacing={2} sx={{ height: '100%' }}>
           {/* Stats Section */}
           <Grid item xs={12}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={4}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
                 <StatCardContent
                   icon={<AssignmentIcon fontSize="large" />}
                   title="Total Tasks"
@@ -317,7 +412,7 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                   color={theme.palette.primary.main}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={6} md={3}>
                 <StatCardContent
                   icon={<CheckCircleOutlineIcon fontSize="large" />}
                   title="Completed Tasks"
@@ -325,7 +420,7 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                   color={theme.palette.success.main}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={6} md={3}>
                 <StatCardContent
                   icon={<PendingActionsIcon fontSize="large" />}
                   title="Active Tasks"
@@ -333,43 +428,45 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                   color={theme.palette.warning.main}
                 />
               </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <StatCardContent
+                  icon={<FlagIcon fontSize="large" />}
+                  title="Completion Rate"
+                  value={`${Math.round((tasks.filter(task => task.completed).length / tasks.length) * 100) || 0}%`}
+                  color={theme.palette.info.main}
+                />
+              </Grid>
             </Grid>
           </Grid>
 
           {/* Tasks Section */}
-          <Grid item xs={12} sx={{ 
-            flexGrow: 1,
-            minHeight: 0,
-            width: '100%'
-          }}>
-            <Grid container spacing={3} sx={{ 
-              height: '100%',
-              margin: 0,
-              width: '100%',
-            }}>
-              <Grid item xs={12} md={6} sx={{ 
-                height: '100%',
-                paddingTop: '0 !important'
-              }}>
-                <TaskContainer>
+          <Grid item xs={12} sx={{ flexGrow: 1 }}>
+            <Grid container spacing={2} sx={{ height: '100%' }}>
+              <Grid item xs={12} md={6}>
+                <StyledPaper sx={{ 
+                  height: '100%',
+                  minHeight: { xs: '400px', lg: '450px' },
+                  maxHeight: { xs: '400px', lg: '450px' },
+                }}>
                   <TaskSection 
                     title="Active Tasks" 
                     tasks={tasks.filter(task => !task.completed)}
                     type="active"
                   />
-                </TaskContainer>
+                </StyledPaper>
               </Grid>
-              <Grid item xs={12} md={6} sx={{ 
-                height: '100%',
-                paddingTop: '0 !important'
-              }}>
-                <TaskContainer>
+              <Grid item xs={12} md={6}>
+                <StyledPaper sx={{ 
+                  height: '100%',
+                  minHeight: { xs: '400px', lg: '450px' },
+                  maxHeight: { xs: '400px', lg: '450px' },
+                }}>
                   <TaskSection 
                     title="Completed" 
                     tasks={tasks.filter(task => task.completed)}
                     type="completed"
                   />
-                </TaskContainer>
+                </StyledPaper>
               </Grid>
             </Grid>
           </Grid>
@@ -403,9 +500,13 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
 
       <TaskForm 
         open={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditingTask(null);
+        }}
         onAddTask={onAddTask}
         existingMilestones={milestones}
+        editingTask={editingTask}
       />
     </Box>
   );

@@ -1,17 +1,32 @@
 import React, { useState } from 'react';
-import { TextField, Button, Typography, Box, Grid, Paper, InputAdornment, IconButton, FormControlLabel, Checkbox } from '@mui/material';
+import { 
+  TextField, Button, Typography, Box, Grid, Paper, 
+  InputAdornment, IconButton, FormControlLabel, Checkbox,
+  Divider
+} from '@mui/material';
 import { styled } from '@mui/material/styles';
+
+// Icons
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import EmailIcon from '@mui/icons-material/Email';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+
+// Components
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 
+// Services
+import StorageService from '../services/storage';
+
+// Styled Components
 const GradientBackground = styled(Box)(({ theme }) => ({
-  backgroundImage: `url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d')`,
+  backgroundImage: theme.palette.mode === 'dark' 
+    ? 'linear-gradient(to bottom right, #1a1a1a, #2d3436)'
+    : `url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d')`,
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   backgroundRepeat: 'no-repeat',
@@ -24,18 +39,26 @@ const GradientBackground = styled(Box)(({ theme }) => ({
 }));
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(6),
+  padding: theme.spacing(4, 4),
   borderRadius: 24,
   width: '100%',
-  maxWidth: 450,
-  backgroundColor: 'rgba(255, 255, 255, 0.98)',
+  maxWidth: 600,
+  backgroundColor: theme.palette.mode === 'dark' 
+    ? 'rgba(30, 30, 30, 0.95)'
+    : 'rgba(255, 255, 255, 0.98)',
   backdropFilter: 'blur(10px)',
-  boxShadow: '0 8px 40px rgba(0, 0, 0, 0.12)',
-  border: '1px solid rgba(255, 255, 255, 0.3)',
+  boxShadow: theme.palette.mode === 'dark'
+    ? '0 8px 40px rgba(0, 0, 0, 0.5)'
+    : '0 8px 40px rgba(0, 0, 0, 0.12)',
+  border: `1px solid ${theme.palette.mode === 'dark' 
+    ? 'rgba(255, 255, 255, 0.1)'
+    : 'rgba(255, 255, 255, 0.3)'}`,
   transition: 'all 0.3s ease-in-out',
   '&:hover': {
     transform: 'translateY(-5px)',
-    boxShadow: '0 12px 50px rgba(0, 0, 0, 0.18)',
+    boxShadow: theme.palette.mode === 'dark'
+      ? '0 12px 50px rgba(0, 0, 0, 0.7)'
+      : '0 12px 50px rgba(0, 0, 0, 0.18)',
   },
 }));
 
@@ -43,23 +66,31 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: 12,
     transition: 'all 0.3s ease',
+    backgroundColor: theme.palette.mode === 'dark' 
+      ? 'rgba(255, 255, 255, 0.05)'
+      : 'rgba(0, 0, 0, 0.02)',
     '&:hover': {
       transform: 'translateY(-2px)',
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+      backgroundColor: theme.palette.mode === 'dark' 
+        ? 'rgba(255, 255, 255, 0.08)'
+        : 'rgba(0, 0, 0, 0.03)',
     },
     '&.Mui-focused': {
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+      backgroundColor: theme.palette.mode === 'dark' 
+        ? 'rgba(255, 255, 255, 0.08)'
+        : 'rgba(0, 0, 0, 0.03)',
     },
   },
 }));
 
 const StyledButton = styled(Button)(({ theme }) => ({
-  marginTop: theme.spacing(3),
-  padding: theme.spacing(2),
-  fontSize: '1.1rem',
+  padding: theme.spacing(1.5),
+  fontSize: '1rem',
   borderRadius: 12,
   textTransform: 'none',
-  background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+  fontWeight: 600,
   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
   transition: 'all 0.3s ease',
   '&:hover': {
@@ -75,23 +106,21 @@ function SignUp({ onSignUp, onToggleLogin }) {
     password: '',
     confirmPassword: '',
     fullName: '',
-    acceptTerms: false
+    acceptTerms: false,
+    showPassword: false
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [openSnackbar, setOpenSnackbar] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
     
-    // Username validation
     if (!formData.username) {
       newErrors.username = 'Username is required';
     } else if (formData.username.length < 3) {
       newErrors.username = 'Username must be at least 3 characters';
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email) {
       newErrors.email = 'Email is required';
@@ -99,7 +128,6 @@ function SignUp({ onSignUp, onToggleLogin }) {
       newErrors.email = 'Invalid email format';
     }
 
-    // Password validation
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
@@ -108,17 +136,14 @@ function SignUp({ onSignUp, onToggleLogin }) {
       newErrors.password = 'Password must contain at least one number';
     }
 
-    // Confirm password
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    // Full name validation
     if (!formData.fullName) {
       newErrors.fullName = 'Full name is required';
     }
 
-    // Terms acceptance
     if (!formData.acceptTerms) {
       newErrors.acceptTerms = 'You must accept the terms and conditions';
     }
@@ -127,12 +152,24 @@ function SignUp({ onSignUp, onToggleLogin }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSignUp = () => {
-    if (!validateForm()) {
-      return;
+  const handleChange = (field) => (event) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value
+    }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
 
-    const users = JSON.parse(localStorage.getItem('users')) || [];
+  const togglePasswordVisibility = () => {
+    setFormData(prev => ({ ...prev, showPassword: !prev.showPassword }));
+  };
+
+  const handleSignUp = () => {
+    if (!validateForm()) return;
+
+    const users = StorageService.getUsers();
     
     if (users.some(user => user.username === formData.username)) {
       setErrors(prev => ({ ...prev, username: 'Username already exists' }));
@@ -155,9 +192,9 @@ function SignUp({ onSignUp, onToggleLogin }) {
     };
 
     users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
-    localStorage.setItem(`tasks_${formData.username}`, JSON.stringify([]));
-    localStorage.setItem(`milestones_${formData.username}`, JSON.stringify([]));
+    StorageService.setUsers(users);
+    StorageService.setTasks(formData.username, []);
+    StorageService.setMilestones(formData.username, []);
     
     setOpenSnackbar(true);
     
@@ -166,61 +203,57 @@ function SignUp({ onSignUp, onToggleLogin }) {
     }, 2000);
   };
 
-  const handleChange = (field) => (event) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value
-    }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const handleCloseSnackbar = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setOpenSnackbar(false);
-  };
-
   return (
     <GradientBackground>
       <StyledPaper elevation={4}>
-        <Grid container spacing={3}>
+        <Grid container spacing={3} sx={{ px: 4 }}>
           <Grid item xs={12}>
             <Typography 
               variant="h4" 
               component="h1" 
               gutterBottom 
               fontWeight="800"
+              textAlign="center"
               sx={{ 
-                textAlign: 'center',
                 background: 'linear-gradient(45deg, #2C3E50, #3498DB)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 color: 'transparent',
-                mb: 4
               }}
             >
               Create Account
             </Typography>
           </Grid>
+
           <Grid item xs={12}>
+            <Divider sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Personal Information
+              </Typography>
+            </Divider>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
             <StyledTextField
               label="Full Name"
-              variant="outlined"
               fullWidth
               value={formData.fullName}
               onChange={handleChange('fullName')}
               error={!!errors.fullName}
               helperText={errors.fullName}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <BadgeOutlinedIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
             />
           </Grid>
-          <Grid item xs={12}>
+
+          <Grid item xs={12} sm={6}>
             <StyledTextField
               label="Username"
-              variant="outlined"
               fullWidth
               value={formData.username}
               onChange={handleChange('username')}
@@ -235,11 +268,11 @@ function SignUp({ onSignUp, onToggleLogin }) {
               }}
             />
           </Grid>
+
           <Grid item xs={12}>
             <StyledTextField
               label="Email"
               type="email"
-              variant="outlined"
               fullWidth
               value={formData.email}
               onChange={handleChange('email')}
@@ -254,11 +287,11 @@ function SignUp({ onSignUp, onToggleLogin }) {
               }}
             />
           </Grid>
-          <Grid item xs={12}>
+
+          <Grid item xs={12} sm={6}>
             <StyledTextField
               label="Password"
-              type={showPassword ? 'text' : 'password'}
-              variant="outlined"
+              type={formData.showPassword ? 'text' : 'password'}
               fullWidth
               value={formData.password}
               onChange={handleChange('password')}
@@ -272,22 +305,22 @@ function SignUp({ onSignUp, onToggleLogin }) {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOffOutlinedIcon /> : <VisibilityOutlinedIcon />}
+                    <IconButton onClick={togglePasswordVisibility} edge="end">
+                      {formData.showPassword ? 
+                        <VisibilityOffOutlinedIcon /> : 
+                        <VisibilityOutlinedIcon />
+                      }
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
             />
           </Grid>
-          <Grid item xs={12}>
+
+          <Grid item xs={12} sm={6}>
             <StyledTextField
               label="Confirm Password"
-              type={showPassword ? 'text' : 'password'}
-              variant="outlined"
+              type={formData.showPassword ? 'text' : 'password'}
               fullWidth
               value={formData.confirmPassword}
               onChange={handleChange('confirmPassword')}
@@ -302,6 +335,7 @@ function SignUp({ onSignUp, onToggleLogin }) {
               }}
             />
           </Grid>
+
           <Grid item xs={12}>
             <FormControlLabel
               control={
@@ -314,39 +348,11 @@ function SignUp({ onSignUp, onToggleLogin }) {
               label="I accept the terms and conditions"
             />
             {errors.acceptTerms && (
-              <Typography color="error" variant="caption" display="block">
+              <Typography color="error" variant="caption" display="block" sx={{ mt: 0.5 }}>
                 {errors.acceptTerms}
               </Typography>
             )}
           </Grid>
-
-          {Object.keys(errors).length > 0 && (
-            <Grid item xs={12}>
-              <Box
-                sx={{
-                  backgroundColor: 'rgba(211, 47, 47, 0.1)',
-                  padding: 2,
-                  borderRadius: 1,
-                  marginBottom: 2
-                }}
-              >
-                {Object.entries(errors).map(([field, error]) => (
-                  <Typography 
-                    key={field}
-                    color="error" 
-                    variant="body2"
-                    sx={{ 
-                      '&:not(:last-child)': { 
-                        marginBottom: 0.5 
-                      }
-                    }}
-                  >
-                    • {error}
-                  </Typography>
-                ))}
-              </Box>
-            </Grid>
-          )}
 
           <Grid item xs={12}>
             <StyledButton
@@ -358,14 +364,12 @@ function SignUp({ onSignUp, onToggleLogin }) {
               Sign Up
             </StyledButton>
           </Grid>
+
           <Grid item xs={12}>
             <Typography 
               variant="body1" 
               align="center" 
-              sx={{ 
-                color: 'text.secondary',
-                mt: 2
-              }}
+              sx={{ color: 'text.secondary' }}
             >
               Already have an account?{' '}
               <Button 
@@ -393,11 +397,9 @@ function SignUp({ onSignUp, onToggleLogin }) {
       <Snackbar
         open={openSnackbar}
         autoHideDuration={2000}
-        onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert
-          onClose={handleCloseSnackbar}
           severity="success"
           variant="filled"
           sx={{

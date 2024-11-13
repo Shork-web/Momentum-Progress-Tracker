@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
   Dialog,
@@ -106,13 +106,23 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   },
 }));
 
-function TaskForm({ open, onClose, onAddTask }) {
+function TaskForm({ open, onClose, onAddTask, existingMilestones, editingTask }) {
   const theme = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
   const [newMilestones, setNewMilestones] = useState([{ title: '', description: '', dueDate: '' }]);
+
+  useEffect(() => {
+    if (editingTask) {
+      setTitle(editingTask.title);
+      setDescription(editingTask.description || '');
+      setPriority(editingTask.priority || 'medium');
+      setDueDate(editingTask.dueDate ? new Date(editingTask.dueDate).toISOString().split('T')[0] : '');
+      setNewMilestones(editingTask.milestones || [{ title: '', description: '', dueDate: '' }]);
+    }
+  }, [editingTask]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -123,13 +133,20 @@ function TaskForm({ open, onClose, onAddTask }) {
       isNew: true
     }));
 
-    onAddTask({
+    const taskData = {
       title,
       description,
       priority,
       dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       milestones: milestoneData,
-    });
+    };
+
+    if (editingTask) {
+      taskData.id = editingTask.id;
+      taskData.completed = editingTask.completed;
+    }
+
+    onAddTask(taskData);
     handleClose();
   };
 
@@ -163,7 +180,7 @@ function TaskForm({ open, onClose, onAddTask }) {
         px: 3,
         pt: 3,
       }}>
-        Add New Task
+        {editingTask ? 'Edit Task' : 'Add New Task'}
       </DialogTitle>
       <DialogContent sx={{ px: 3 }}>
         <Box
@@ -304,7 +321,7 @@ function TaskForm({ open, onClose, onAddTask }) {
             }
           }}
         >
-          Add Task
+          {editingTask ? 'Update Task' : 'Add Task'}
         </Button>
       </DialogActions>
     </StyledDialog>
@@ -315,6 +332,8 @@ TaskForm.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onAddTask: PropTypes.func.isRequired,
+  existingMilestones: PropTypes.array.isRequired,
+  editingTask: PropTypes.object,
 };
 
 export default TaskForm;
