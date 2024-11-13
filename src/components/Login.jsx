@@ -242,6 +242,18 @@ function Login({ onLogin, onToggleSignUp }) {
                 ),
               }}
             />
+            {error && (
+            <Grid item xs={12}>
+              <Typography 
+                color="error" 
+                variant="body2" 
+                align="center"
+                sx={{ mt: 1 }}
+              >
+                {error}
+              </Typography>
+            </Grid>
+          )}
           </Grid>
           <Grid item xs={12}>
             <FormControlLabel
