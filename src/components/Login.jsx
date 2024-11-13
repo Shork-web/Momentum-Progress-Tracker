@@ -1,26 +1,18 @@
 import React, { useState } from 'react';
-import { TextField, Button, Typography, Box, Grid, Paper, InputAdornment, IconButton } from '@mui/material';
-import { styled, keyframes } from '@mui/material/styles';
+import { TextField, Button, Typography, Box, Grid, Paper, InputAdornment, IconButton, FormControlLabel, Checkbox } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import LoginIcon from '@mui/icons-material/Login';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
-
-const gradientAnimation = keyframes`
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-`;
+import EmailIcon from '@mui/icons-material/Email';
 
 const GradientBackground = styled(Box)(({ theme }) => ({
-  background: `linear-gradient(-45deg, 
-    #2C3E50,
-    #3498DB,
-    #2980B9,
-    #34495E)`,
-  backgroundSize: '400% 400%',
-  animation: `${gradientAnimation} 15s ease infinite`,
+  backgroundImage: `url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d')`,
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat',
   width: '100vw',
   height: '100vh',
   display: 'flex',
@@ -34,8 +26,8 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   borderRadius: 24,
   width: '100%',
   maxWidth: 450,
-  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  backdropFilter: 'blur(20px)',
+  backgroundColor: 'rgba(255, 255, 255, 0.98)',
+  backdropFilter: 'blur(10px)',
   boxShadow: '0 8px 40px rgba(0, 0, 0, 0.12)',
   border: '1px solid rgba(255, 255, 255, 0.3)',
   transition: 'all 0.3s ease-in-out',
@@ -75,53 +67,81 @@ const StyledButton = styled(Button)(({ theme }) => ({
 }));
 
 function Login({ onLogin, onToggleSignUp }) {
+  const [loginMethod, setLoginMethod] = useState('username'); // 'username' or 'email'
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleLogin = () => {
-    if (!username || !password) {
+    setError('');
+    
+    if ((!username && loginMethod === 'username') || 
+        (!email && loginMethod === 'email') || 
+        !password) {
       setError('Please fill in all fields');
       return;
     }
 
     const users = JSON.parse(localStorage.getItem('users')) || [];
-    const user = users.find(u => u.username === username && u.password === password);
+    const user = users.find(u => 
+      (loginMethod === 'username' && u.username === username) ||
+      (loginMethod === 'email' && u.email === email)
+    );
 
-    if (user) {
-      // Create a sanitized user object without password
+    if (user && user.password === password) {
       const sanitizedUser = {
         username: user.username,
+        email: user.email,
         id: user.id,
+        fullName: user.fullName,
         createdAt: user.createdAt,
         lastLogin: new Date().toISOString()
       };
 
-      // Update last login time
+      // Update last login time and login count
       const updatedUsers = users.map(u => 
-        u.username === username 
-          ? { ...u, lastLogin: new Date().toISOString() }
+        u.id === user.id 
+          ? { 
+              ...u, 
+              lastLogin: new Date().toISOString(),
+              loginCount: (u.loginCount || 0) + 1
+            }
           : u
       );
       localStorage.setItem('users', JSON.stringify(updatedUsers));
 
-      // Load user's tasks and milestones
-      const tasks = localStorage.getItem(`tasks_${username}`);
-      const milestones = localStorage.getItem(`milestones_${username}`);
-
-      if (!tasks) {
-        localStorage.setItem(`tasks_${username}`, JSON.stringify([]));
-      }
-      if (!milestones) {
-        localStorage.setItem(`milestones_${username}`, JSON.stringify([]));
+      if (rememberMe) {
+        localStorage.setItem('rememberedUser', JSON.stringify({
+          loginMethod,
+          credential: loginMethod === 'username' ? username : email
+        }));
+      } else {
+        localStorage.removeItem('rememberedUser');
       }
 
       onLogin(sanitizedUser);
     } else {
-      setError('Invalid username or password');
+      setError('Invalid credentials');
     }
   };
+
+  // Load remembered user on component mount
+  React.useEffect(() => {
+    const remembered = localStorage.getItem('rememberedUser');
+    if (remembered) {
+      const { loginMethod: savedMethod, credential } = JSON.parse(remembered);
+      setLoginMethod(savedMethod);
+      if (savedMethod === 'username') {
+        setUsername(credential);
+      } else {
+        setEmail(credential);
+      }
+      setRememberMe(true);
+    }
+  }, []);
 
   return (
     <GradientBackground>
@@ -146,20 +166,55 @@ function Login({ onLogin, onToggleSignUp }) {
             </Typography>
           </Grid>
           <Grid item xs={12}>
-            <StyledTextField
-              label="Username"
-              variant="outlined"
-              fullWidth
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <PersonOutlineIcon color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <Box sx={{ mb: 2 }}>
+              <Button
+                onClick={() => setLoginMethod('username')}
+                variant={loginMethod === 'username' ? 'contained' : 'outlined'}
+                sx={{ mr: 1 }}
+              >
+                Username
+              </Button>
+              <Button
+                onClick={() => setLoginMethod('email')}
+                variant={loginMethod === 'email' ? 'contained' : 'outlined'}
+              >
+                Email
+              </Button>
+            </Box>
+          </Grid>
+          <Grid item xs={12}>
+            {loginMethod === 'username' ? (
+              <StyledTextField
+                label="Username"
+                variant="outlined"
+                fullWidth
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PersonOutlineIcon color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            ) : (
+              <StyledTextField
+                label="Email"
+                type="email"
+                variant="outlined"
+                fullWidth
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EmailIcon color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
           </Grid>
           <Grid item xs={12}>
             <StyledTextField
@@ -188,6 +243,35 @@ function Login({ onLogin, onToggleSignUp }) {
               }}
             />
           </Grid>
+          <Grid item xs={12}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="Remember me"
+            />
+          </Grid>
+          {error && (
+            <Grid item xs={12}>
+              <Typography 
+                color="error" 
+                variant="body2" 
+                align="center"
+                sx={{ 
+                  backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                  padding: 1,
+                  borderRadius: 1,
+                  width: '100%'
+                }}
+              >
+                {error}
+              </Typography>
+            </Grid>
+          )}
           <Grid item xs={12}>
             <StyledButton
               variant="contained"
@@ -227,18 +311,6 @@ function Login({ onLogin, onToggleSignUp }) {
               </Button>
             </Typography>
           </Grid>
-          {error && (
-            <Grid item xs={12}>
-              <Typography 
-                color="error" 
-                variant="body2" 
-                align="center"
-                sx={{ mt: 1 }}
-              >
-                {error}
-              </Typography>
-            </Grid>
-          )}
         </Grid>
       </StyledPaper>
     </GradientBackground>
