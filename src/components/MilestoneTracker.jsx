@@ -141,44 +141,6 @@ function MilestoneTracker({ milestones, setMilestones, addNotification }) {
     <StyledPaper elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
         <Typography variant="h4" fontWeight="bold" color="primary">Milestones</Typography>
-        <Box>
-          <IconButton onClick={handleMenuOpen} size="small" sx={{ mr: 1 }}>
-            <FilterListIcon />
-          </IconButton>
-          <IconButton onClick={handleMenuOpen} size="small">
-            <SortIcon />
-          </IconButton>
-        </Box>
-      </Box>
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        TransitionComponent={Fade}
-      >
-        <MenuItem onClick={() => { setFilter('all'); handleMenuClose(); }}>All Milestones</MenuItem>
-        <MenuItem onClick={() => { setFilter('active'); handleMenuClose(); }}>Active Milestones</MenuItem>
-        <MenuItem onClick={() => { setFilter('completed'); handleMenuClose(); }}>Completed Milestones</MenuItem>
-        <Divider />
-        <MenuItem onClick={() => { setSortBy('dueDate'); handleMenuClose(); }}>Sort by Due Date</MenuItem>
-      </Menu>
-      <Box sx={{ p: 3, display: 'flex', borderBottom: 1, borderColor: 'divider' }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          value={newMilestone}
-          onChange={(e) => setNewMilestone(e.target.value)}
-          placeholder="Enter a new milestone"
-          size="small"
-          sx={{ mr: 2, bgcolor: 'background.paper' }}
-        />
-        <GlassButton
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={addMilestone}
-        >
-          ADD
-        </GlassButton>
       </Box>
       <Box sx={{ flexGrow: 1, overflow: 'auto', p: 3 }}>
         <Grid container spacing={3}>
