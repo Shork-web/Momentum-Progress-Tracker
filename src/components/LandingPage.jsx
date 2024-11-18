@@ -77,7 +77,7 @@ function LandingPage({ onGetStarted }) {
       <Grid container spacing={0} sx={{ minHeight: '100vh' }}>
         <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', p: 4 }}>
           <Typography variant="h1" component="h1" gutterBottom fontWeight="bold" sx={{ fontSize: { xs: '3rem', md: '4rem', lg: '5rem' } }}>
-            Welcome to Task Tracker
+            Momentum
           </Typography>
           <Typography variant="h4" paragraph sx={{ mb: 4, opacity: 0.9 }}>
             Streamline your workflow, boost productivity, and achieve your goals with our powerful task management tool.

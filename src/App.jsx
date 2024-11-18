@@ -23,6 +23,8 @@ import TabPanel, { StyledTabs, a11yProps } from './components/TabPanel';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import SignUp from './components/Signup';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 
 // Router
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -349,7 +351,7 @@ function App() {
             textOverflow: 'ellipsis'
           }}
         >
-          Progress Tracker
+          Momentum
         </Typography>
         <IconButton 
           sx={{ ml: { xs: 0, sm: 1 } }} 
