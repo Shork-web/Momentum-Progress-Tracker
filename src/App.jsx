@@ -20,11 +20,12 @@ import MilestoneTracker from './components/MilestoneTracker';
 import NotificationCenter from './components/NotificationCenter';
 import Dashboard from './components/Dashboard';
 import TabPanel, { StyledTabs, a11yProps } from './components/TabPanel';
-import LandingPage from './components/LandingPage';
+import LandingPage from './components/LandingPage/Landingpage';
 import Login from './components/Login';
 import SignUp from './components/Signup';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import ForgotPassword from './components/ForgotPassword';
 
 // Router
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -47,6 +48,7 @@ function App() {
   const [showSignUp, setShowSignUp] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // User and data management
   const [currentUser, setCurrentUser] = useState(() => StorageService.getUser());
@@ -419,7 +421,7 @@ function App() {
   );
 
   // Main render
-  if (!currentUser && !showAuth) {
+  if (!currentUser && !showAuth && !showForgotPassword) {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
@@ -428,20 +430,33 @@ function App() {
     );
   }
 
-  if (showAuth) {
+  if (showAuth || showForgotPassword) {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        {location.pathname === '/signup' ? (
-          <SignUp 
-            onSignUp={handleSignUp} 
-            onToggleLogin={() => navigate('/login')} 
+        {showForgotPassword ? (
+          <ForgotPassword 
+            onBackToLogin={() => {
+              setShowForgotPassword(false);
+              setShowAuth(true);
+            }} 
           />
         ) : (
-          <Login 
-            onLogin={handleLogin} 
-            onToggleSignUp={() => navigate('/signup')} 
-          />
+          <>
+            {location.pathname === '/signup' ? (
+              <SignUp 
+                onSignUp={handleSignUp} 
+                onToggleLogin={() => navigate('/login')} 
+              />
+            ) : (
+              <Login 
+                onLogin={handleLogin} 
+                onToggleSignUp={() => navigate('/signup')}
+                setShowForgotPassword={setShowForgotPassword}
+                setShowAuth={setShowAuth}
+              />
+            )}
+          </>
         )}
       </ThemeProvider>
     );
