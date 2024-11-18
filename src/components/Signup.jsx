@@ -199,7 +199,7 @@ function SignUp({ onSignUp, onToggleLogin }) {
     setOpenSnackbar(true);
     
     setTimeout(() => {
-      onSignUp();
+      onToggleLogin();
     }, 2000);
   };
 

@@ -165,6 +165,7 @@ function App() {
 
   const handleSignUp = () => {
     setShowSignUp(false);
+    navigate('/login');
   };
 
   // Task handlers
@@ -432,9 +433,15 @@ function App() {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         {location.pathname === '/signup' ? (
-          <SignUp onSignUp={handleSignUp} onToggleLogin={() => navigate('/login')} />
+          <SignUp 
+            onSignUp={handleSignUp} 
+            onToggleLogin={() => navigate('/login')} 
+          />
         ) : (
-          <Login onLogin={handleLogin} onToggleSignUp={() => navigate('/signup')} />
+          <Login 
+            onLogin={handleLogin} 
+            onToggleSignUp={() => navigate('/signup')} 
+          />
         )}
       </ThemeProvider>
     );
