@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
-import { Snackbar, IconButton, Typography, Box, Fade } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
-import { styled } from '@mui/material/styles'
+import React from 'react';
+import { Snackbar, IconButton, Typography, Box, Fade } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import { styled } from '@mui/material/styles';
+import { useNotifications } from '../context/NotificationContext';
 
 const StyledSnackbar = styled(Snackbar)(({ theme }) => ({
   '& .MuiSnackbarContent-root': {
@@ -16,33 +17,36 @@ const StyledSnackbar = styled(Snackbar)(({ theme }) => ({
     border: '1px solid rgba(0, 0, 0, 0.05)',
     backdropFilter: 'blur(10px)',
   },
-}))
+}));
 
-function NotificationCenter({ notifications, setNotifications }) {
-  const [open, setOpen] = useState(false)
-  const [currentNotification, setCurrentNotification] = useState(null)
+function NotificationCenter() {
+  const { notifications, removeNotification } = useNotifications();
+  const [open, setOpen] = React.useState(false);
+  const [currentNotification, setCurrentNotification] = React.useState(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (notifications.length > 0 && !open) {
-      setCurrentNotification(notifications[0])
-      setOpen(true)
+      setCurrentNotification(notifications[0]);
+      setOpen(true);
     }
-  }, [notifications, open])
+  }, [notifications, open]);
 
   const handleClose = (event, reason) => {
     if (reason === 'clickaway') {
-      return
+      return;
     }
-    setOpen(false)
-    setNotifications(prev => prev.slice(1))
-  }
+    setOpen(false);
+    if (currentNotification) {
+      removeNotification(currentNotification.id);
+    }
+  };
 
   const handleExited = () => {
     if (notifications.length > 0) {
-      setCurrentNotification(notifications[0])
-      setOpen(true)
+      setCurrentNotification(notifications[0]);
+      setOpen(true);
     }
-  }
+  };
 
   return (
     <StyledSnackbar
@@ -56,9 +60,7 @@ function NotificationCenter({ notifications, setNotifications }) {
       onExited={handleExited}
       TransitionComponent={Fade}
       TransitionProps={{ timeout: 400 }}
-      sx={{
-        mt: 2,
-      }}
+      sx={{ mt: 2 }}
       message={
         <Box sx={{ 
           display: 'flex', 
@@ -94,7 +96,7 @@ function NotificationCenter({ notifications, setNotifications }) {
         </IconButton>
       }
     />
-  )
+  );
 }
 
-export default NotificationCenter
+export default NotificationCenter;

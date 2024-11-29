@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Box, Typography, Checkbox, IconButton, Fab, Tooltip, Chip,
-  Avatar, Grid, useTheme, Paper, useMediaQuery, Container, List, ListItem, ListItemIcon, ListItemText, ListItemSecondaryAction, Button
+  Avatar, Grid, useTheme, Paper, useMediaQuery, Container, List, ListItem, 
+  ListItemIcon, ListItemText, ListItemSecondaryAction, Button, Alert, CircularProgress
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -14,6 +15,16 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
 import EditIcon from '@mui/icons-material/Edit';
 import PropTypes from 'prop-types';
+import StorageService from '../services/storage';
+import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
+import { 
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+} from '@mui/material';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -88,14 +99,159 @@ const priorityColors = {
   }
 };
 
-function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) {
+function TaskList({ 
+  tasks, 
+  onToggleTask, 
+  onDeleteTask, 
+  onAddTask, 
+  milestones,
+  currentUser,
+  addNotification 
+}) {
+  const theme = useTheme();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const theme = useTheme();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredTasks, setFilteredTasks] = useState(tasks);
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Add this state to track expanded descriptions
   const [expandedTasks, setExpandedTasks] = useState({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+
+  useEffect(() => {
+    setFilteredTasks(tasks);
+  }, [tasks]);
+
+  const handleSearch = async (term) => {
+    setSearchTerm(term);
+    if (!term.trim()) {
+      setFilteredTasks(tasks);
+      return;
+    }
+
+    try {
+      const results = await StorageService.searchTasks(currentUser.id, term);
+      setFilteredTasks(results);
+    } catch (error) {
+      console.error('Search failed:', error);
+      addNotification('Failed to search tasks');
+    }
+  };
+
+  const handleEditTask = (task) => {
+    if (task.completed) {
+      return;
+    }
+    setEditingTask(task);
+    setIsFormOpen(true);
+  };
+
+  const handleAddTask = async (taskData) => {
+    try {
+      setIsLoading(true);
+      await onAddTask(taskData);
+      setIsFormOpen(false);
+      setEditingTask(null);
+    } catch (error) {
+      console.error('Failed to save task:', error);
+      setError('Failed to save task. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleTask = async (taskId) => {
+    try {
+      setIsLoading(true);
+      await onToggleTask(taskId);
+    } catch (error) {
+      console.error('Failed to toggle task:', error);
+      setError('Failed to update task status');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    try {
+      // Find the task
+      const taskToDelete = tasks.find(task => task.id === taskId);
+      if (!taskToDelete) {
+        throw new Error('Task not found');
+      }
+
+      // Show confirmation dialog
+      setTaskToDelete({
+        task: taskToDelete
+      });
+      setDeleteDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to prepare task deletion:', error);
+      addNotification('Failed to prepare task deletion');
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete) return;
+
+    try {
+      setIsLoading(true);
+      
+      // Simple delete operation
+      await onDeleteTask(taskToDelete.task.id);
+      
+      setDeleteDialogOpen(false);
+      setTaskToDelete(null);
+      addNotification('Task deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      addNotification('Failed to delete task');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const DeleteConfirmationDialog = () => (
+    <Dialog
+      open={deleteDialogOpen}
+      onClose={() => setDeleteDialogOpen(false)}
+      aria-labelledby="delete-dialog-title"
+      aria-describedby="delete-dialog-description"
+    >
+      <DialogTitle id="delete-dialog-title">
+        Confirm Deletion
+      </DialogTitle>
+      <DialogContent>
+        <DialogContentText id="delete-dialog-description">
+          Are you sure you want to delete "{taskToDelete?.task.title}"?
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button 
+          onClick={() => {
+            setDeleteDialogOpen(false);
+            setTaskToDelete(null);
+          }}
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleConfirmDelete}
+          color="error"
+          variant="contained"
+          disabled={isLoading}
+          startIcon={isLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
+        >
+          Delete
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 
   // Add this handler to toggle description expansion
   const toggleDescription = (taskId) => {
@@ -140,14 +296,6 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
       </Box>
     </StatCard>
   );
-
-  const handleEditTask = (task) => {
-    if (task.completed) {
-      return;
-    }
-    setEditingTask(task);
-    setIsFormOpen(true);
-  };
 
   const TaskSection = ({ title, tasks, type }) => (
     <Box sx={{ 
@@ -222,6 +370,7 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                 <Checkbox
                   checked={task.completed}
                   onChange={() => onToggleTask(task.id)}
+                  disabled={isLoading}
                   sx={{
                     color: theme.palette.mode === 'dark' ? '#475569' : '#cbd5e1',
                     '&.Mui-checked': {
@@ -245,19 +394,16 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                     >
                       {task.title}
                     </Typography>
-                    {!task.completed && (
+                    {!task.completed && task.priority && (
                       <Chip
-                        label={task.priority || 'low'}
+                        label={task.priority}
                         size="small"
                         sx={{ 
                           height: 20,
-                          backgroundColor: priorityColors[task.priority || 'low'].bg,
-                          color: priorityColors[task.priority || 'low'].light,
+                          backgroundColor: priorityColors[task.priority].bg,
+                          color: priorityColors[task.priority].light,
                           fontWeight: 600,
                           fontSize: '0.75rem',
-                          '& .MuiChip-label': {
-                            px: 1,
-                          },
                         }}
                       />
                     )}
@@ -266,47 +412,21 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                 secondary={
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {task.description && (
-                      <Box sx={{ position: 'relative' }}>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: theme.palette.text.secondary,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: '-webkit-box',
-                            WebkitLineClamp: expandedTasks[task.id] ? 'unset' : 2,
-                            WebkitBoxOrient: 'vertical',
-                            cursor: 'pointer',
-                            pr: 6, // Make room for action buttons
-                            '&:hover': {
-                              color: theme.palette.text.primary,
-                            },
-                            transition: 'all 0.2s ease',
-                          }}
-                          onClick={() => toggleDescription(task.id)}
-                        >
-                          {task.description}
-                        </Typography>
-                        {task.description.length > 120 && (
-                          <Button
-                            size="small"
-                            onClick={() => toggleDescription(task.id)}
-                            sx={{ 
-                              textTransform: 'none',
-                              minWidth: 'auto',
-                              p: 0.5,
-                              mt: 0.5,
-                              color: theme.palette.text.secondary,
-                              '&:hover': {
-                                backgroundColor: 'transparent',
-                                color: theme.palette.primary.main,
-                              }
-                            }}
-                          >
-                            {expandedTasks[task.id] ? 'Show less' : 'Show more'}
-                          </Button>
-                        )}
-                      </Box>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{ 
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: expandedTasks[task.id] ? 'unset' : 2,
+                          WebkitBoxOrient: 'vertical',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => toggleDescription(task.id)}
+                      >
+                        {task.description}
+                      </Typography>
                     )}
                     {task.dueDate && (
                       <Chip
@@ -316,28 +436,18 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                         sx={{ 
                           height: 24,
                           width: 'fit-content',
-                          backgroundColor: theme.palette.mode === 'dark' 
-                            ? 'rgba(241, 245, 249, 0.1)'
-                            : '#f8fafc',
-                          color: theme.palette.text.secondary,
                         }}
                       />
                     )}
                   </Box>
                 }
               />
-              <ListItemSecondaryAction sx={{ 
-                display: 'flex', 
-                gap: 1,
-                position: 'absolute',
-                right: 8,
-                top: 8,
-                transform: 'none',
-              }}>
+              <ListItemSecondaryAction>
                 {!task.completed && (
                   <IconButton 
                     onClick={() => handleEditTask(task)}
                     size="small"
+                    disabled={isLoading}
                     sx={{ 
                       color: theme.palette.mode === 'dark' ? '#475569' : '#cbd5e1',
                       '&:hover': { 
@@ -352,9 +462,11 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
                   </IconButton>
                 )}
                 <IconButton 
-                  onClick={() => onDeleteTask(task.id)}
+                  onClick={() => handleDeleteTask(task.id)}
                   size="small"
+                  disabled={isLoading}
                   sx={{ 
+                    ml: 1,
                     color: theme.palette.mode === 'dark' ? '#475569' : '#cbd5e1',
                     '&:hover': { 
                       color: '#ef4444',
@@ -498,16 +610,47 @@ function TaskList({ tasks, onToggleTask, onDeleteTask, onAddTask, milestones }) 
         </Fab>
       </Tooltip>
 
+      {error && (
+        <Alert 
+          severity="error" 
+          onClose={() => setError(null)}
+          sx={{ mb: 2 }}
+        >
+          {error}
+        </Alert>
+      )}
+
+      {isLoading && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            zIndex: 1000,
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      )}
+
       <TaskForm 
         open={isFormOpen}
         onClose={() => {
           setIsFormOpen(false);
           setEditingTask(null);
         }}
-        onAddTask={onAddTask}
+        onAddTask={handleAddTask}
         existingMilestones={milestones}
         editingTask={editingTask}
       />
+
+      <DeleteConfirmationDialog />
     </Box>
   );
 }
@@ -527,6 +670,8 @@ TaskList.propTypes = {
   onDeleteTask: PropTypes.func.isRequired,
   onAddTask: PropTypes.func.isRequired,
   milestones: PropTypes.array.isRequired,
+  currentUser: PropTypes.object.isRequired,
+  addNotification: PropTypes.func.isRequired,
 };
 
 export default TaskList;

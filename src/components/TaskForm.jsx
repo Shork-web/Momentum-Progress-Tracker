@@ -12,11 +12,12 @@ import {
   Select,
   MenuItem,
   Box,
-  useTheme,
-  styled,
   Typography,
   Divider,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
+import { useTheme, styled } from '@mui/material/styles';
 
 const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialog-paper': {
@@ -108,63 +109,94 @@ const StyledSelect = styled(Select)(({ theme }) => ({
 
 function TaskForm({ open, onClose, onAddTask, existingMilestones, editingTask }) {
   const theme = useTheme();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('medium');
-  const [dueDate, setDueDate] = useState('');
-  const [newMilestones, setNewMilestones] = useState([{ title: '', description: '', dueDate: '' }]);
+  const [formState, setFormState] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    dueDate: '',
+    newMilestones: [{ title: '', description: '', dueDate: '' }],
+    isSubmitting: false,
+    error: null
+  });
 
   useEffect(() => {
     if (editingTask) {
-      setTitle(editingTask.title);
-      setDescription(editingTask.description || '');
-      setPriority(editingTask.priority || 'medium');
-      setDueDate(editingTask.dueDate ? new Date(editingTask.dueDate).toISOString().split('T')[0] : '');
-      setNewMilestones(editingTask.milestones || [{ title: '', description: '', dueDate: '' }]);
+      setFormState(prev => ({
+        ...prev,
+        title: editingTask.title,
+        description: editingTask.description || '',
+        priority: editingTask.priority || 'medium',
+        dueDate: editingTask.dueDate ? new Date(editingTask.dueDate).toISOString().split('T')[0] : '',
+        newMilestones: editingTask.milestones || [{ title: '', description: '', dueDate: '' }]
+      }));
     }
   }, [editingTask]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const milestoneData = newMilestones.map(milestone => ({
-      title: milestone.title,
-      description: milestone.description,
-      dueDate: milestone.dueDate,
-      isNew: true
-    }));
+    
+    try {
+      setFormState(prev => ({ ...prev, isSubmitting: true, error: null }));
 
-    const taskData = {
-      title,
-      description,
-      priority,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-      milestones: milestoneData,
-    };
+      const milestoneData = formState.newMilestones
+        .filter(m => m.title.trim()) // Only include milestones with titles
+        .map(milestone => ({
+          title: milestone.title,
+          description: milestone.description,
+          dueDate: milestone.dueDate,
+          isNew: true
+        }));
 
-    if (editingTask) {
-      taskData.id = editingTask.id;
-      taskData.completed = editingTask.completed;
+      const taskData = {
+        title: formState.title,
+        description: formState.description,
+        priority: formState.priority,
+        dueDate: formState.dueDate ? new Date(formState.dueDate).toISOString() : null,
+        milestones: milestoneData,
+      };
+
+      if (editingTask) {
+        taskData.id = editingTask.id;
+        taskData.completed = editingTask.completed;
+      }
+
+      await onAddTask(taskData);
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save task:', error);
+      setFormState(prev => ({ 
+        ...prev, 
+        error: 'Failed to save task. Please try again.',
+        isSubmitting: false 
+      }));
     }
-
-    onAddTask(taskData);
-    handleClose();
   };
 
   const handleClose = () => {
-    setTitle('');
-    setDescription('');
-    setPriority('medium');
-    setDueDate('');
-    setNewMilestones([{ title: '', description: '', dueDate: '' }]);
+    setFormState({
+      title: '',
+      description: '',
+      priority: 'medium',
+      dueDate: '',
+      newMilestones: [{ title: '', description: '', dueDate: '' }],
+      isSubmitting: false,
+      error: null
+    });
     onClose();
   };
 
   const handleAddMilestone = () => {
-    setNewMilestones([...newMilestones, { title: '', description: '', dueDate: '' }]);
+    setFormState(prev => ({
+      ...prev,
+      newMilestones: [...prev.newMilestones, { title: '', description: '', dueDate: '' }]
+    }));
   };
 
   const handleRemoveMilestone = (index) => {
-    setNewMilestones(newMilestones.filter((_, i) => i !== index));
+    setFormState(prev => ({
+      ...prev,
+      newMilestones: prev.newMilestones.filter((_, i) => i !== index)
+    }));
   };
 
   return (
@@ -174,31 +206,26 @@ function TaskForm({ open, onClose, onAddTask, existingMilestones, editingTask })
       maxWidth="sm"
       fullWidth
     >
-      <DialogTitle sx={{ 
-        color: theme.palette.text.primary,
-        fontWeight: 600,
-        px: 3,
-        pt: 3,
-      }}>
+      <DialogTitle>
         {editingTask ? 'Edit Task' : 'Add New Task'}
       </DialogTitle>
-      <DialogContent sx={{ px: 3 }}>
+      <DialogContent>
+        {formState.error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {formState.error}
+          </Alert>
+        )}
         <Box
           component="form"
           onSubmit={handleSubmit}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2.5,
-            mt: 1
-          }}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}
         >
           <StyledTextField
             autoFocus
             label="Title"
             fullWidth
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={formState.title}
+            onChange={(e) => setFormState(prev => ({ ...prev, title: e.target.value }))}
             required
           />
           <StyledTextField
@@ -206,8 +233,8 @@ function TaskForm({ open, onClose, onAddTask, existingMilestones, editingTask })
             fullWidth
             multiline
             rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={formState.description}
+            onChange={(e) => setFormState(prev => ({ ...prev, description: e.target.value }))}
             required
           />
           <FormControl fullWidth>
@@ -220,9 +247,9 @@ function TaskForm({ open, onClose, onAddTask, existingMilestones, editingTask })
               Priority
             </InputLabel>
             <StyledSelect
-              value={priority}
+              value={formState.priority}
               label="Priority"
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={(e) => setFormState(prev => ({ ...prev, priority: e.target.value }))}
               required
             >
               <MenuItem value="low">Low</MenuItem>
@@ -234,8 +261,8 @@ function TaskForm({ open, onClose, onAddTask, existingMilestones, editingTask })
             type="date"
             label="Due Date"
             fullWidth
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
+            value={formState.dueDate}
+            onChange={(e) => setFormState(prev => ({ ...prev, dueDate: e.target.value }))}
             InputLabelProps={{
               shrink: true,
             }}
@@ -247,13 +274,16 @@ function TaskForm({ open, onClose, onAddTask, existingMilestones, editingTask })
               Milestones
             </Typography>
           </Divider>
-          {newMilestones.map((milestone, index) => (
+          {formState.newMilestones.map((milestone, index) => (
             <Box key={index} sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
               <StyledTextField
                 label="Milestone Title"
                 fullWidth
                 value={milestone.title}
-                onChange={(e) => setNewMilestones(newMilestones.map((m, i) => i === index ? { ...m, title: e.target.value } : m))}
+                onChange={(e) => setFormState(prev => ({
+                  ...prev,
+                  newMilestones: prev.newMilestones.map((m, i) => i === index ? { ...m, title: e.target.value } : m)
+                }))}
                 required
               />
               <StyledTextField
@@ -262,14 +292,20 @@ function TaskForm({ open, onClose, onAddTask, existingMilestones, editingTask })
                 multiline
                 rows={2}
                 value={milestone.description}
-                onChange={(e) => setNewMilestones(newMilestones.map((m, i) => i === index ? { ...m, description: e.target.value } : m))}
+                onChange={(e) => setFormState(prev => ({
+                  ...prev,
+                  newMilestones: prev.newMilestones.map((m, i) => i === index ? { ...m, description: e.target.value } : m)
+                }))}
               />
               <StyledTextField
                 type="date"
                 label="Milestone Due Date"
                 fullWidth
                 value={milestone.dueDate}
-                onChange={(e) => setNewMilestones(newMilestones.map((m, i) => i === index ? { ...m, dueDate: e.target.value } : m))}
+                onChange={(e) => setFormState(prev => ({
+                  ...prev,
+                  newMilestones: prev.newMilestones.map((m, i) => i === index ? { ...m, dueDate: e.target.value } : m)
+                }))}
                 InputLabelProps={{
                   shrink: true,
                 }}
@@ -295,33 +331,23 @@ function TaskForm({ open, onClose, onAddTask, existingMilestones, editingTask })
           </Button>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
+      <DialogActions>
         <Button 
           onClick={handleClose}
-          sx={{ 
-            color: theme.palette.text.secondary,
-            fontWeight: 500,
-            '&:hover': {
-              backgroundColor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.05)'
-                : 'rgba(0, 0, 0, 0.05)',
-            }
-          }}
+          disabled={formState.isSubmitting}
         >
           Cancel
         </Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
-          sx={{
-            bgcolor: '#0ea5e9',
-            fontWeight: 500,
-            '&:hover': {
-              bgcolor: '#0284c7',
-            }
-          }}
+          disabled={formState.isSubmitting}
         >
-          {editingTask ? 'Update Task' : 'Add Task'}
+          {formState.isSubmitting ? (
+            <CircularProgress size={24} />
+          ) : (
+            editingTask ? 'Update Task' : 'Add Task'
+          )}
         </Button>
       </DialogActions>
     </StyledDialog>

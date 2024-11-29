@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   TextField, Button, Typography, Box, Paper, 
-  InputAdornment, Stack, Divider
+  InputAdornment, Stack, Divider, CircularProgress
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -68,49 +68,75 @@ const GradientButton = styled(Button)(({ theme }) => ({
 }));
 
 function ForgotPassword({ onBackToLogin }) {
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formState, setFormState] = useState({
+    email: '',
+    error: '',
+    successMessage: '',
+    isSubmitting: false
+  });
 
   const handleSubmit = async () => {
-    setError('');
-    setSuccessMessage('');
-    setIsSubmitting(true);
+    setFormState(prev => ({ 
+      ...prev, 
+      error: '',
+      successMessage: '',
+      isSubmitting: true 
+    }));
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) {
-      setError('Email is required');
-      setIsSubmitting(false);
+    if (!formState.email) {
+      setFormState(prev => ({ 
+        ...prev, 
+        error: 'Email is required',
+        isSubmitting: false 
+      }));
       return;
     }
-    if (!emailRegex.test(email)) {
-      setError('Invalid email format');
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Check if email exists in the system
-    const users = StorageService.getUsers();
-    const userExists = users.some(user => user.email === email);
-
-    if (!userExists) {
-      setError('No account found with this email address');
-      setIsSubmitting(false);
+    if (!emailRegex.test(formState.email)) {
+      setFormState(prev => ({ 
+        ...prev, 
+        error: 'Invalid email format',
+        isSubmitting: false 
+      }));
       return;
     }
 
-    // Simulate sending reset email
-    setTimeout(() => {
-      setSuccessMessage('Password reset instructions have been sent to your email');
-      setIsSubmitting(false);
+    try {
+      // Check if email exists in the system
+      const user = await StorageService.getUserByEmail(formState.email);
       
-      // Redirect to login after 3 seconds
+      if (!user) {
+        setFormState(prev => ({ 
+          ...prev, 
+          error: 'No account found with this email address',
+          isSubmitting: false 
+        }));
+        return;
+      }
+
+      // Simulate sending reset email
       setTimeout(() => {
-        onBackToLogin();
-      }, 3000);
-    }, 1500);
+        setFormState(prev => ({ 
+          ...prev,
+          successMessage: 'Password reset instructions have been sent to your email',
+          isSubmitting: false 
+        }));
+        
+        // Redirect to login after 3 seconds
+        setTimeout(() => {
+          onBackToLogin();
+        }, 3000);
+      }, 1500);
+
+    } catch (error) {
+      console.error('Password reset failed:', error);
+      setFormState(prev => ({ 
+        ...prev, 
+        error: 'Failed to process request. Please try again.',
+        isSubmitting: false 
+      }));
+    }
   };
 
   return (
@@ -143,10 +169,11 @@ function ForgotPassword({ onBackToLogin }) {
             fullWidth
             placeholder="Email Address"
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={!!error}
-            helperText={error}
+            value={formState.email}
+            onChange={(e) => setFormState(prev => ({ ...prev, email: e.target.value }))}
+            error={!!formState.error}
+            helperText={formState.error}
+            disabled={formState.isSubmitting}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -156,7 +183,7 @@ function ForgotPassword({ onBackToLogin }) {
             }}
           />
 
-          {successMessage && (
+          {formState.successMessage && (
             <Typography 
               color="success.main" 
               variant="body2" 
@@ -169,16 +196,20 @@ function ForgotPassword({ onBackToLogin }) {
                 opacity: 0.8
               }}
             >
-              {successMessage}
+              {formState.successMessage}
             </Typography>
           )}
 
           <GradientButton
             fullWidth
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={formState.isSubmitting}
           >
-            {isSubmitting ? 'Sending...' : 'Reset Password'}
+            {formState.isSubmitting ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              'Reset Password'
+            )}
           </GradientButton>
 
           <Divider />
@@ -187,6 +218,7 @@ function ForgotPassword({ onBackToLogin }) {
             variant="text"
             startIcon={<ArrowBackIcon />}
             onClick={onBackToLogin}
+            disabled={formState.isSubmitting}
             sx={{ 
               textTransform: 'none',
               fontWeight: 600,

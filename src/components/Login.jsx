@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   TextField, Button, Typography, Box, Grid, Paper, 
   InputAdornment, IconButton, FormControlLabel, Checkbox, 
-  Stack, Divider
+  Stack, Divider, CircularProgress
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -85,28 +85,34 @@ const SocialButton = styled(Button)(({ theme }) => ({
 }));
 
 function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) {
-  // State
   const [formState, setFormState] = useState({
     identifier: '',
     password: '',
     showPassword: false,
     errors: {},
-    rememberMe: false
+    rememberMe: false,
+    isSubmitting: false
   });
 
-  // Effects
   useEffect(() => {
-    const remembered = StorageService.getRememberedUser();
-    if (remembered) {
-      setFormState(prev => ({
-        ...prev,
-        identifier: remembered.credential,
-        rememberMe: true
-      }));
-    }
+    const loadRememberedUser = async () => {
+      try {
+        const remembered = await StorageService.getRememberedUser();
+        if (remembered) {
+          setFormState(prev => ({
+            ...prev,
+            identifier: remembered.credential,
+            rememberMe: true
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load remembered user:', error);
+      }
+    };
+
+    loadRememberedUser();
   }, []);
 
-  // Handlers
   const handleInputChange = (field) => (event) => {
     setFormState(prev => ({
       ...prev,
@@ -129,7 +135,7 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
     }));
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const { identifier, password, rememberMe } = formState;
     const errors = {};
     
@@ -146,35 +152,36 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
       return;
     }
 
-    // Find user
-    const users = StorageService.getUsers();
-    const user = users.find(u => 
-      u.username === identifier || u.email === identifier
-    );
+    try {
+      setFormState(prev => ({ ...prev, isSubmitting: true }));
 
-    if (user && user.password === password) {
-      const sanitizedUser = {
-        username: user.username,
-        email: user.email,
-        id: user.id,
-        fullName: user.fullName,
-        createdAt: user.createdAt,
-        lastLogin: new Date().toISOString()
-      };
-
-      StorageService.updateUserLoginInfo(user.id);
-
-      if (rememberMe) {
-        StorageService.setRememberedUser('identifier', identifier);
-      } else {
-        StorageService.setRememberedUser(null, null);
+      // Try to find user by username first, then by email
+      let user = await StorageService.getUser(identifier);
+      if (!user) {
+        user = await StorageService.getUserByEmail(identifier);
       }
 
-      onLogin(sanitizedUser);
-    } else {
+      if (user && user.password === password) {
+        if (rememberMe) {
+          await StorageService.setRememberedUser(user.id, identifier);
+        } else {
+          await StorageService.setRememberedUser(null, null);
+        }
+
+        onLogin(user);
+      } else {
+        setFormState(prev => ({ 
+          ...prev, 
+          errors: { auth: 'Invalid credentials' },
+          isSubmitting: false
+        }));
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
       setFormState(prev => ({ 
         ...prev, 
-        errors: { auth: 'Invalid credentials' }
+        errors: { auth: 'Login failed. Please try again.' },
+        isSubmitting: false
       }));
     }
   };
@@ -198,11 +205,12 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
         <Stack spacing={3}>
           <StyledTextField
             fullWidth
-            placeholder="Username"
+            placeholder="Username or Email"
             value={formState.identifier}
             onChange={handleInputChange('identifier')}
-            error={!!formState.errors.identifier}
-            helperText={formState.errors.identifier}
+            error={!!formState.errors.identifier || !!formState.errors.auth}
+            helperText={formState.errors.identifier || formState.errors.auth}
+            disabled={formState.isSubmitting}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -220,6 +228,7 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
             onChange={handleInputChange('password')}
             error={!!formState.errors.password}
             helperText={formState.errors.password}
+            disabled={formState.isSubmitting}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -228,7 +237,11 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
               ),
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton onClick={togglePasswordVisibility} edge="end">
+                  <IconButton 
+                    onClick={togglePasswordVisibility} 
+                    edge="end"
+                    disabled={formState.isSubmitting}
+                  >
                     {formState.showPassword ? 
                       <VisibilityOffOutlinedIcon /> : 
                       <VisibilityOutlinedIcon />
@@ -247,6 +260,7 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
                   onChange={handleRememberMeChange}
                   color="primary"
                   size="small"
+                  disabled={formState.isSubmitting}
                 />
               }
               label={
@@ -262,6 +276,7 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
                 setShowAuth(false);
                 setShowForgotPassword(true);
               }}
+              disabled={formState.isSubmitting}
               sx={{ 
                 textTransform: 'none',
                 color: 'primary.main',
@@ -275,24 +290,38 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
           <GradientButton
             fullWidth
             onClick={handleLogin}
+            disabled={formState.isSubmitting}
           >
-            Login
+            {formState.isSubmitting ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              'Login'
+            )}
           </GradientButton>
 
           <Divider sx={{ my: 2 }}>
             <Typography variant="body2" color="text.secondary">
-              Or Sign Up Using
+              Or Sign In Using
             </Typography>
           </Divider>
 
           <Stack direction="row" spacing={2}>
-            <SocialButton variant="outlined">
+            <SocialButton 
+              variant="outlined"
+              disabled={formState.isSubmitting}
+            >
               <FacebookIcon color="primary" />
             </SocialButton>
-            <SocialButton variant="outlined">
+            <SocialButton 
+              variant="outlined"
+              disabled={formState.isSubmitting}
+            >
               <TwitterIcon sx={{ color: '#1DA1F2' }} />
             </SocialButton>
-            <SocialButton variant="outlined">
+            <SocialButton 
+              variant="outlined"
+              disabled={formState.isSubmitting}
+            >
               <GoogleIcon sx={{ color: '#DB4437' }} />
             </SocialButton>
           </Stack>
@@ -302,6 +331,7 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
               Don't have an account?{' '}
               <Button 
                 onClick={onToggleSignUp}
+                disabled={formState.isSubmitting}
                 sx={{ 
                   textTransform: 'none',
                   fontWeight: 600,

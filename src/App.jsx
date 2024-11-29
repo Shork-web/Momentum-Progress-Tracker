@@ -4,7 +4,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { 
   Box, Typography, Tab, AppBar, Toolbar, IconButton, 
   useMediaQuery, Button, Dialog, DialogActions, DialogContent, 
-  DialogContentText, DialogTitle 
+  DialogContentText, DialogTitle, CircularProgress 
 } from '@mui/material';
 
 // Icons
@@ -30,6 +30,8 @@ import ForgotPassword from './components/ForgotPassword';
 // Router
 import { useNavigate, useLocation } from 'react-router-dom';
 import StorageService from './services/storage';
+import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 function App() {
   // Router hooks
@@ -37,35 +39,21 @@ function App() {
   const location = useLocation();
   
   // Theme and media query
-  const [mode, setMode] = useState(() => {
-    const currentUser = StorageService.getUser();
-    return currentUser ? StorageService.getUserTheme(currentUser.username) : 'light';
-  });
+  const [mode, setMode] = useState('light');
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
 
   // State management
-  const [notifications, setNotifications] = useState([]);
   const [showSignUp, setShowSignUp] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // User and data management
-  const [currentUser, setCurrentUser] = useState(() => StorageService.getUser());
-
-  const [tasks, setTasks] = useState(() => {
-    if (currentUser) {
-      return StorageService.getTasks(currentUser.username);
-    }
-    return [];
-  });
-
-  const [milestones, setMilestones] = useState(() => {
-    if (currentUser) {
-      return StorageService.getMilestones(currentUser.username);
-    }
-    return [];
-  });
+  const [currentUser, setCurrentUser] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [milestones, setMilestones] = useState([]);
 
   // Tab management
   const [tabValue, setTabValue] = useState(() => {
@@ -104,11 +92,6 @@ function App() {
     },
   });
 
-  // Notification handlers
-  const addNotification = (message) => {
-    setNotifications(prev => [...prev, { id: Date.now(), message }]);
-  };
-
   // Navigation handlers
   const handleTabChange = (event, newValue) => {
     const indexToPath = {
@@ -121,14 +104,16 @@ function App() {
   };
 
   // Theme handlers
-  const toggleColorMode = () => {
-    setMode((prevMode) => {
-      const newMode = prevMode === 'light' ? 'dark' : 'light';
+  const toggleColorMode = async () => {
+    try {
+      const newMode = mode === 'light' ? 'dark' : 'light';
       if (currentUser) {
-        StorageService.setUserTheme(currentUser.username, newMode);
+        await StorageService.setUserTheme(currentUser.id, newMode);
       }
-      return newMode;
-    });
+      setMode(newMode);
+    } catch (err) {
+      console.error('Failed to update theme:', err);
+    }
   };
 
   // Authentication handlers
@@ -137,32 +122,45 @@ function App() {
     navigate('/login');
   };
 
-  const handleLogin = (user) => {
-    const tasks = StorageService.getTasks(user.username);
-    const milestones = StorageService.getMilestones(user.username);
-    
-    setTasks(tasks);
-    setMilestones(milestones);
-    setCurrentUser(user);
-    setShowAuth(false);
-    navigate('/dashboard');
+  const handleLogin = async (user) => {
+    try {
+      await StorageService.updateUserLoginInfo(user.id);
+      
+      // Load user data
+      const [userTasks, userMilestones, userTheme] = await Promise.all([
+        StorageService.getTasks(user.id),
+        StorageService.getMilestones(user.id),
+        StorageService.getUserTheme(user.id)
+      ]);
+      
+      // Set all state at once
+      setCurrentUser(user);
+      setTasks(userTasks || []);
+      setMilestones(userMilestones || []);
+      setMode(userTheme || 'light');
+      setShowAuth(false);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Login failed:', err);
+    }
   };
 
-  const handleLogout = () => {
-    if (currentUser) {
-      StorageService.setTasks(currentUser.username, tasks);
-      StorageService.setMilestones(currentUser.username, milestones);
-      StorageService.clearUserData(currentUser.username);
+  const handleLogout = async () => {
+    try {
+      // Only clear the remembered user credentials
+      await StorageService.setUser(null);
+      
+      // Clear user state but don't clear data
+      setCurrentUser(null);
+      setMode('light');
+      
+      // Close dialog and redirect
+      setLogoutDialogOpen(false);
+      setShowAuth(true);
+      navigate('/');
+    } catch (err) {
+      console.error('Logout failed:', err);
     }
-    
-    setMode('light');
-    
-    setCurrentUser(null);
-    setTasks([]);
-    setMilestones([]);
-    setShowAuth(true);
-    setLogoutDialogOpen(false);
-    navigate('/');
   };
 
   const handleSignUp = () => {
@@ -171,133 +169,211 @@ function App() {
   };
 
   // Task handlers
-  const handleAddTask = (newTask) => {
-    if (newTask.id) {
-      // If task has ID, it's an update
-      const updatedTasks = tasks.map(task => 
-        task.id === newTask.id ? newTask : task
-      );
-      setTasks(updatedTasks);
+  const handleAddTask = async (newTask) => {
+    try {
+      if (!currentUser) return;
 
-      // Update milestones
-      const oldTask = tasks.find(task => task.id === newTask.id);
-      const oldMilestones = oldTask?.milestones || [];
-      const newMilestones = newTask.milestones;
+      if (newTask.id) {
+        // Update existing task
+        await StorageService.updateTask(newTask.id, newTask);
+        
+        // Update tasks state without replacing the entire array
+        setTasks(prevTasks => 
+          prevTasks.map(task => task.id === newTask.id ? newTask : task)
+        );
 
-      // Remove old milestones associated with this task
-      const filteredMilestones = milestones.filter(milestone => 
-        !oldMilestones.some(oldM => oldM.id === milestone.id)
-      );
+        // Handle new milestones only
+        if (newTask.milestones?.length > 0) {
+          const newMilestones = newTask.milestones.filter(m => !m.id);
+          
+          if (newMilestones.length > 0) {
+            const createdMilestones = await Promise.all(
+              newMilestones.map(async milestone => {
+                const id = await StorageService.createMilestone(currentUser.id, {
+                  ...milestone,
+                  taskId: newTask.id
+                });
+                return { ...milestone, id, taskId: newTask.id };
+              })
+            );
 
-      // Add updated milestones
-      const updatedMilestones = [
-        ...filteredMilestones,
-        ...newMilestones.map(milestone => ({
-          ...milestone,
-          id: milestone.id || Date.now() + Math.random(),
-          taskId: newTask.id
-        }))
-      ];
+            // Append only new milestones to existing ones
+            setMilestones(prevMilestones => [...prevMilestones, ...createdMilestones]);
+          }
+        }
+      } else {
+        // Create new task
+        const taskId = await StorageService.createTask(currentUser.id, newTask);
+        const taskWithId = { ...newTask, id: taskId };
+        
+        // Add new task to state
+        setTasks(prevTasks => [...prevTasks, taskWithId]);
 
-      setMilestones(updatedMilestones);
+        // Handle milestones for new task
+        if (newTask.milestones?.length > 0) {
+          const createdMilestones = await Promise.all(
+            newTask.milestones.map(async milestone => {
+              const id = await StorageService.createMilestone(currentUser.id, {
+                ...milestone,
+                taskId
+              });
+              return { ...milestone, id, taskId };
+            })
+          );
 
-      if (currentUser) {
-        StorageService.setTasks(currentUser.username, updatedTasks);
-        StorageService.setMilestones(currentUser.username, updatedMilestones);
+          setMilestones(prevMilestones => [...prevMilestones, ...createdMilestones]);
+        }
       }
-      addNotification('Task updated successfully!');
-    } else {
-      // New task
-      const taskWithId = {
-        ...newTask,
-        id: Date.now(),
+    } catch (err) {
+      console.error('Failed to save task:', err);
+    }
+  };
+
+  const handleToggleTask = async (taskId) => {
+    try {
+      const taskToUpdate = tasks.find(t => t.id === taskId);
+      if (!taskToUpdate) return;
+
+      const updatedTask = { 
+        ...taskToUpdate, 
+        completed: !taskToUpdate.completed 
       };
-      const updatedTasks = [...tasks, taskWithId];
-      setTasks(updatedTasks);
 
-      // Add new milestones
-      const newMilestones = newTask.milestones;
-      const updatedMilestones = [
-        ...milestones,
-        ...newMilestones.map(milestone => ({
-          ...milestone,
-          id: Date.now() + Math.random(),
-          taskId: taskWithId.id
-        }))
-      ];
-      setMilestones(updatedMilestones);
-
-      if (currentUser) {
-        StorageService.setTasks(currentUser.username, updatedTasks);
-        StorageService.setMilestones(currentUser.username, updatedMilestones);
-      }
-      addNotification('New task added successfully!');
+      await StorageService.updateTask(taskId, updatedTask);
+      setTasks(prev => prev.map(task =>
+        task.id === taskId ? updatedTask : task
+      ));
+    } catch (err) {
+      console.error('Failed to toggle task:', err);
     }
   };
 
-  const handleToggleTask = (taskId) => {
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    );
-    setTasks(updatedTasks);
-    if (currentUser) {
-      StorageService.setTasks(currentUser.username, updatedTasks);
+  const handleDeleteTask = async (taskId) => {
+    try {
+      console.log('Deleting task:', taskId);
+      
+      // Delete from database
+      await StorageService.deleteTask(taskId);
+      
+      // Update local state
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+      
+      console.log('Task deleted successfully');
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+      throw err;
     }
-  };
-
-  const handleDeleteTask = (taskId) => {
-    const taskToDelete = tasks.find(task => task.id === taskId);
-    if (!taskToDelete) return;
-    
-    const updatedTasks = tasks.filter(task => task.id !== taskId);
-    setTasks(updatedTasks);
-    
-    if (currentUser) {
-      StorageService.setTasks(currentUser.username, updatedTasks);
-    }
-    addNotification('Task deleted successfully!');
   };
 
   // Milestone handlers
-  const handleMilestoneUpdate = (updatedMilestones) => {
-    setMilestones(updatedMilestones);
-    if (currentUser) {
-      StorageService.setMilestones(currentUser.username, updatedMilestones);
+  const handleMilestoneUpdate = async (updatedMilestones) => {
+    try {
+      if (!currentUser) return;
+      
+      // Update local state
+      setMilestones(updatedMilestones);
+      
+      // Update in database
+      await StorageService.setMilestones(currentUser.id, updatedMilestones);
+      
+    } catch (error) {
+      console.error('Failed to update milestones:', error);
     }
   };
 
   // Effects
   useEffect(() => {
-    const pathToIndex = {
-      '/dashboard': 0,
-      '/tasks': 1,
-      '/milestones': 2,
-      '/': 0
+    const initializeApp = async () => {
+      try {
+        setIsLoading(true);
+        const user = await StorageService.getUser();
+        
+        if (user) {
+          const [userTasks, userMilestones, userTheme] = await Promise.all([
+            StorageService.getTasks(user.id),
+            StorageService.getMilestones(user.id),
+            StorageService.getUserTheme(user.id)
+          ]);
+          
+          setCurrentUser(user);
+          setTasks(userTasks || []);
+          setMilestones(userMilestones || []);
+          setMode(userTheme || 'light');
+
+          // Set the correct tab value based on current path
+          const pathToIndex = {
+            '/dashboard': 0,
+            '/tasks': 1,
+            '/milestones': 2
+          };
+          setTabValue(pathToIndex[location.pathname] || 0);
+
+          // Don't redirect if already on a valid route
+          if (location.pathname === '/') {
+            navigate('/dashboard');
+          }
+        } else {
+          // Only redirect to landing page if not on auth routes
+          if (!['/login', '/signup'].includes(location.pathname)) {
+            navigate('/');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to initialize app:', err);
+        setError('Failed to load application data');
+      } finally {
+        setIsLoading(false);
+      }
     };
-    setTabValue(pathToIndex[location.pathname] || 0);
-  }, [location.pathname]);
+
+    initializeApp();
+  }, []); // Empty dependency array to run only once on mount
 
   useEffect(() => {
-    if (currentUser) {
-      StorageService.setUser(currentUser);
-    } else {
-      StorageService.setUser(null);
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (!currentUser) {
-      if (location.pathname === '/login' || location.pathname === '/signup') {
-        setShowAuth(true);
-      } else if (location.pathname !== '/') {
+    if (!isLoading && !currentUser) {
+      if (!['/login', '/signup', '/'].includes(location.pathname)) {
         navigate('/');
       }
-    } else {
-      if (['/login', '/signup', '/'].includes(location.pathname)) {
-        navigate('/dashboard');
-      }
     }
-  }, [currentUser, location.pathname, navigate]);
+  }, [currentUser, isLoading]);
+
+  // Load initial data
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        setIsLoading(true);
+        const user = await StorageService.getUser();
+        
+        if (user) {
+          const [userTasks, userMilestones, userTheme] = await Promise.all([
+            StorageService.getTasks(user.id),
+            StorageService.getMilestones(user.id),
+            StorageService.getUserTheme(user.id)
+          ]);
+          
+          setCurrentUser(user);
+          setTasks(userTasks || []);
+          setMilestones(userMilestones || []);
+          setMode(userTheme || 'light');
+
+          if (location.pathname === '/') {
+            navigate('/dashboard');
+          }
+        } else {
+          if (!['/login', '/signup'].includes(location.pathname)) {
+            navigate('/');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to initialize app:', err);
+        setError('Failed to load application data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeApp();
+  }, []);
 
   // Render methods
   const renderLogoutDialog = () => (
@@ -421,11 +497,16 @@ function App() {
   );
 
   // Main render
-  if (!currentUser && !showAuth && !showForgotPassword) {
+  if (!currentUser && !showAuth && !showForgotPassword && location.pathname === '/') {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <LandingPage onGetStarted={handleGetStarted} />
+        <NotificationProvider>
+          <AuthProvider value={{ currentUser }}>
+            <LandingPage onGetStarted={handleGetStarted} />
+            <NotificationCenter />
+          </AuthProvider>
+        </NotificationProvider>
       </ThemeProvider>
     );
   }
@@ -434,77 +515,124 @@ function App() {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        {showForgotPassword ? (
-          <ForgotPassword 
-            onBackToLogin={() => {
-              setShowForgotPassword(false);
-              setShowAuth(true);
-            }} 
-          />
-        ) : (
-          <>
-            {location.pathname === '/signup' ? (
-              <SignUp 
-                onSignUp={handleSignUp} 
-                onToggleLogin={() => navigate('/login')} 
+        <NotificationProvider>
+          <AuthProvider value={{ currentUser }}>
+            {showForgotPassword ? (
+              <ForgotPassword 
+                onBackToLogin={() => {
+                  setShowForgotPassword(false);
+                  setShowAuth(true);
+                }} 
               />
             ) : (
-              <Login 
-                onLogin={handleLogin} 
-                onToggleSignUp={() => navigate('/signup')}
-                setShowForgotPassword={setShowForgotPassword}
-                setShowAuth={setShowAuth}
-              />
+              <>
+                {location.pathname === '/signup' ? (
+                  <SignUp 
+                    onSignUp={handleSignUp} 
+                    onToggleLogin={() => navigate('/login')} 
+                  />
+                ) : (
+                  <Login 
+                    onLogin={handleLogin} 
+                    onToggleSignUp={() => navigate('/signup')}
+                    setShowForgotPassword={setShowForgotPassword}
+                    setShowAuth={setShowAuth}
+                  />
+                )}
+              </>
             )}
-          </>
-        )}
+            <NotificationCenter />
+          </AuthProvider>
+        </NotificationProvider>
       </ThemeProvider>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh' 
+        }}>
+          <CircularProgress />
+        </Box>
+      </ThemeProvider>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column',
+        gap: 2 
+      }}>
+        <Typography variant="h6" color="error">{error}</Typography>
+        <Button variant="contained" onClick={() => window.location.reload()}>
+          Retry
+        </Button>
+      </Box>
     );
   }
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          height: '100vh',
-          width: '100%',
-        }}
-      >
-        {renderAppBar()}
-        <NotificationCenter notifications={notifications} setNotifications={setNotifications} />
-        <Box 
-          sx={{ 
-            flexGrow: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            height: 'calc(100vh - 104px)', // Adjust this value based on your AppBar height
-          }}
-        >
-          <TabPanel value={tabValue} index={0}>
-            <Dashboard tasks={tasks} milestones={milestones} />
-          </TabPanel>
-          <TabPanel value={tabValue} index={1}>
-            <TaskList 
-              tasks={tasks}
-              onToggleTask={handleToggleTask}
-              onDeleteTask={handleDeleteTask}
-              onAddTask={handleAddTask}
-              milestones={milestones}
-            />
-          </TabPanel>
-          <TabPanel value={tabValue} index={2}>
-            <MilestoneTracker 
-              milestones={milestones} 
-              setMilestones={handleMilestoneUpdate}
-              addNotification={addNotification}
-            />
-          </TabPanel>
-        </Box>
-      </Box>
+      <NotificationProvider>
+        <AuthProvider value={{ currentUser }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100vh',
+            width: '100%',
+          }}>
+            {renderAppBar()}
+            <NotificationCenter />
+            <Box 
+              sx={{ 
+                flexGrow: 1,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                height: 'calc(100vh - 104px)', // Adjust this value based on your AppBar height
+              }}
+            >
+              <TabPanel value={tabValue} index={0}>
+                <Dashboard 
+                  tasks={tasks} 
+                  milestones={milestones} 
+                  currentUser={currentUser} 
+                />
+              </TabPanel>
+              <TabPanel value={tabValue} index={1}>
+                <TaskList 
+                  tasks={tasks}
+                  onToggleTask={handleToggleTask}
+                  onDeleteTask={handleDeleteTask}
+                  onAddTask={handleAddTask}
+                  milestones={milestones}
+                />
+              </TabPanel>
+              <TabPanel value={tabValue} index={2}>
+                <MilestoneTracker 
+                  milestones={milestones} 
+                  setMilestones={handleMilestoneUpdate}
+                  tasks={tasks}
+                />
+              </TabPanel>
+            </Box>
+          </Box>
+        </AuthProvider>
+      </NotificationProvider>
       {renderLogoutDialog()}
     </ThemeProvider>
   );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Typography, 
   Grid, 
@@ -10,7 +10,10 @@ import {
   Box, 
   Chip, 
   Avatar,
-  Container 
+  Container,
+  CircularProgress,
+  Alert,
+  Button
 } from '@mui/material';
 import { 
   PieChart, 
@@ -32,6 +35,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import PropTypes from 'prop-types';
+import StorageService from '../services/storage';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -68,8 +72,65 @@ const StatCard = styled(Paper)(({ theme }) => ({
   },
 }));
 
-function Dashboard({ tasks, milestones }) {
+function Dashboard({ tasks, milestones, currentUser }) {
+  const [stats, setStats] = useState({
+    totalTasks: 0,
+    completedTasks: 0,
+    totalMilestones: 0,
+    completedMilestones: 0,
+    completionRate: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const theme = useTheme();
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        const taskStats = await StorageService.getTaskStatistics(currentUser.id);
+        setStats(taskStats);
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+        setError('Failed to load dashboard statistics');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, [tasks, milestones, currentUser.id]);
+
+  if (isLoading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        height: '100%'
+      }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert 
+          severity="error" 
+          onClose={() => setError(null)}
+          action={
+            <Button color="inherit" size="small" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      </Box>
+    );
+  }
 
   const taskStatus = tasks.reduce((acc, task) => {
     acc[task.completed ? 'completed' : 'pending']++;
@@ -148,13 +209,7 @@ function Dashboard({ tasks, milestones }) {
   );
 
   return (
-    <Box sx={{ 
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-      backgroundColor: theme.palette.background.default,
-    }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Container maxWidth="xl" sx={{ 
         flexGrow: 1, 
         display: 'flex', 
@@ -172,7 +227,7 @@ function Dashboard({ tasks, milestones }) {
                 <StatCardContent
                   icon={<AssignmentIcon fontSize="large" />}
                   title="Total Tasks"
-                  value={tasks.length}
+                  value={stats.totalTasks}
                   color={theme.palette.primary.main}
                 />
               </Grid>
@@ -180,7 +235,7 @@ function Dashboard({ tasks, milestones }) {
                 <StatCardContent
                   icon={<FlagIcon fontSize="large" />}
                   title="Total Milestones"
-                  value={milestones.length}
+                  value={stats.totalMilestones}
                   color={theme.palette.secondary.main}
                 />
               </Grid>
@@ -188,7 +243,7 @@ function Dashboard({ tasks, milestones }) {
                 <StatCardContent
                   icon={<TrendingUpIcon fontSize="large" />}
                   title="Completion Rate"
-                  value={`${Math.round((taskStatus.completed / tasks.length) * 100)}%`}
+                  value={`${Math.round(stats.completionRate)}%`}
                   color={theme.palette.success.main}
                 />
               </Grid>
@@ -196,7 +251,7 @@ function Dashboard({ tasks, milestones }) {
                 <StatCardContent
                   icon={<CheckCircleOutlineIcon fontSize="large" />}
                   title="Completed Tasks"
-                  value={taskStatus.completed}
+                  value={stats.completedTasks}
                   color={theme.palette.info.main}
                 />
               </Grid>
@@ -526,6 +581,11 @@ Dashboard.propTypes = {
       completed: PropTypes.bool.isRequired,
     })
   ).isRequired,
+  currentUser: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    username: PropTypes.string.isRequired,
+    email: PropTypes.string.isRequired
+  }).isRequired
 };
 
 export default Dashboard;

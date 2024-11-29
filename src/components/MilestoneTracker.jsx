@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { styled } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
@@ -7,6 +7,7 @@ import EventIcon from '@mui/icons-material/Event';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import dayjs from 'dayjs';
 import { 
   TextField, Button, Typography, Box, IconButton, Chip, Tooltip,
@@ -14,6 +15,8 @@ import {
   LinearProgress, Card, CardContent, CardHeader, Paper,
   Grid, Collapse, Avatar
 } from '@mui/material';
+import StorageService from '../services/storage';
+import PropTypes from 'prop-types';
 
 // Styled components matching TaskList design
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -65,12 +68,22 @@ const MilestoneBox = styled(Box)(({ theme }) => ({
   },
 }));
 
-const MilestoneTracker = ({ milestones, setMilestones, addNotification }) => {
+const MilestoneTracker = ({ milestones, setMilestones, addNotification, tasks }) => {
   const theme = useTheme();
   const [newMilestone, setNewMilestone] = useState('');
   const [editingMilestone, setEditingMilestone] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState({});
+  const [taskMap, setTaskMap] = useState({});
+
+  // Create a map of task IDs to task titles
+  useEffect(() => {
+    const map = tasks.reduce((acc, task) => {
+      acc[task.id] = task.title;
+      return acc;
+    }, {});
+    setTaskMap(map);
+  }, [tasks]);
 
   const groupedMilestones = milestones.reduce((acc, milestone) => {
     const taskId = milestone.taskId || 'unassigned';
@@ -100,9 +113,15 @@ const MilestoneTracker = ({ milestones, setMilestones, addNotification }) => {
     ));
   };
 
-  const deleteMilestone = (id) => {
-    setMilestones(prev => prev.filter(milestone => milestone.id !== id));
-    addNotification('Milestone deleted');
+  const deleteMilestone = async (id) => {
+    try {
+      await StorageService.deleteMilestone(id);
+      setMilestones(prev => prev.filter(milestone => milestone.id !== id));
+      addNotification('Milestone deleted');
+    } catch (error) {
+      console.error('Failed to delete milestone:', error);
+      addNotification('Failed to delete milestone', 'error');
+    }
   };
 
   const openEditDialog = (milestone) => {
@@ -152,11 +171,20 @@ const MilestoneTracker = ({ milestones, setMilestones, addNotification }) => {
             const taskProgress = calculateTaskProgress(taskMilestones);
             const isExpanded = expandedTasks[taskId] || false;
             const completedCount = taskMilestones.filter(m => m.completed).length;
+            const taskTitle = taskId === 'unassigned' ? 'Unassigned Milestones' : taskMap[taskId] || `Task ${index + 1}`;
 
             return (
               <Grid item xs={12} sm={6} key={taskId}>
                 <StyledCard>
                   <CardHeader
+                    avatar={
+                      <Avatar sx={{ 
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.2)' : 'rgba(14, 165, 233, 0.1)',
+                        color: '#0ea5e9'
+                      }}>
+                        <AssignmentIcon />
+                      </Avatar>
+                    }
                     title={
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Typography 
@@ -165,10 +193,12 @@ const MilestoneTracker = ({ milestones, setMilestones, addNotification }) => {
                           sx={{ 
                             color: theme.palette.mode === 'dark' 
                               ? theme.palette.grey[100] 
-                              : theme.palette.grey[800] 
+                              : theme.palette.grey[800],
+                            flexGrow: 1,
+                            mr: 2
                           }}
                         >
-                          {taskId === 'unassigned' ? 'Unassigned Milestones' : `Task ${index + 1}`}
+                          {taskTitle}
                         </Typography>
                         <Box>
                           <Chip 
@@ -383,6 +413,18 @@ const MilestoneTracker = ({ milestones, setMilestones, addNotification }) => {
       </Dialog>
     </StyledPaper>
   );
+};
+
+MilestoneTracker.propTypes = {
+  milestones: PropTypes.array.isRequired,
+  setMilestones: PropTypes.func.isRequired,
+  addNotification: PropTypes.func.isRequired,
+  tasks: PropTypes.array.isRequired
+};
+
+MilestoneTracker.defaultProps = {
+  tasks: [],
+  milestones: []
 };
 
 export default MilestoneTracker;

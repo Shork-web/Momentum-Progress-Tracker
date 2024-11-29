@@ -88,102 +88,126 @@ const SocialButton = styled(Button)(({ theme }) => ({
 }));
 
 function SignUp({ onSignUp, onToggleLogin }) {
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formState, setFormState] = useState({
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
     fullName: '',
     acceptTerms: false,
-    showPassword: false
+    showPassword: false,
+    isSubmitting: false,
+    errors: {}
   });
-  const [errors, setErrors] = useState({});
 
   const handleChange = (field) => (event) => {
-    setFormData(prev => ({
+    setFormState(prev => ({
       ...prev,
-      [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value
+      [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value,
+      errors: { ...prev.errors, [field]: '' }
     }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
   };
 
   const togglePasswordVisibility = () => {
-    setFormData(prev => ({ ...prev, showPassword: !prev.showPassword }));
+    setFormState(prev => ({ ...prev, showPassword: !prev.showPassword }));
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     const newErrors = {};
     
-    if (!formData.username) {
+    // Validation
+    if (!formState.username) {
       newErrors.username = 'Username is required';
-    } else if (formData.username.length < 3) {
+    } else if (formState.username.length < 3) {
       newErrors.username = 'Username must be at least 3 characters';
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email) {
+    if (!formState.email) {
       newErrors.email = 'Email is required';
-    } else if (!emailRegex.test(formData.email)) {
+    } else if (!emailRegex.test(formState.email)) {
       newErrors.email = 'Invalid email format';
     }
 
-    if (!formData.password) {
+    if (!formState.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
+    } else if (formState.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
-    } else if (!/(?=.*[0-9])/.test(formData.password)) {
+    } else if (!/(?=.*[0-9])/.test(formState.password)) {
       newErrors.password = 'Password must contain at least one number';
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (formState.password !== formState.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    if (!formData.fullName) {
+    if (!formState.fullName) {
       newErrors.fullName = 'Full name is required';
     }
 
-    if (!formData.acceptTerms) {
+    if (!formState.acceptTerms) {
       newErrors.acceptTerms = 'You must accept the terms and conditions';
     }
 
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length === 0) {
-      const users = StorageService.getUsers();
-      
-      if (users.some(user => user.username === formData.username)) {
-        setErrors(prev => ({ ...prev, username: 'Username already exists' }));
-        return;
-      }
-      if (users.some(user => user.email === formData.email)) {
-        setErrors(prev => ({ ...prev, email: 'Email already exists' }));
+    if (Object.keys(newErrors).length > 0) {
+      setFormState(prev => ({ ...prev, errors: newErrors }));
+      return;
+    }
+
+    try {
+      setFormState(prev => ({ ...prev, isSubmitting: true }));
+
+      // Check if username exists
+      const existingUsername = await StorageService.checkUserExists(formState.username);
+      if (existingUsername) {
+        setFormState(prev => ({ 
+          ...prev, 
+          errors: { ...prev.errors, username: 'Username already exists' },
+          isSubmitting: false
+        }));
         return;
       }
 
+      // Check if email exists
+      const existingEmail = await StorageService.getUserByEmail(formState.email);
+      if (existingEmail) {
+        setFormState(prev => ({ 
+          ...prev, 
+          errors: { ...prev.errors, email: 'Email already exists' },
+          isSubmitting: false
+        }));
+        return;
+      }
+
+      // Create new user
       const newUser = {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        fullName: formData.fullName,
-        createdAt: new Date().toISOString(),
-        id: Date.now(),
-        loginCount: 0,
-        lastLogin: null
+        username: formState.username,
+        email: formState.email,
+        password: formState.password,
+        fullName: formState.fullName,
+        createdAt: new Date().toISOString()
       };
 
-      users.push(newUser);
-      StorageService.setUsers(users);
-      StorageService.setTasks(formData.username, []);
-      StorageService.setMilestones(formData.username, []);
+      await StorageService.setUser(newUser);
       
-      setOpenSnackbar(true);
+      // Show success message and redirect
+      setFormState(prev => ({ 
+        ...prev, 
+        isSubmitting: false,
+        showSuccessMessage: true 
+      }));
       
       setTimeout(() => {
-        onToggleLogin();
+        onSignUp();
       }, 2000);
+
+    } catch (error) {
+      console.error('Sign up failed:', error);
+      setFormState(prev => ({ 
+        ...prev, 
+        errors: { ...prev.errors, submit: 'Failed to create account. Please try again.' },
+        isSubmitting: false
+      }));
     }
   };
 
@@ -209,10 +233,10 @@ function SignUp({ onSignUp, onToggleLogin }) {
               <StyledTextField
                 fullWidth
                 placeholder="Full Name"
-                value={formData.fullName}
+                value={formState.fullName}
                 onChange={handleChange('fullName')}
-                error={!!errors.fullName}
-                helperText={errors.fullName}
+                error={!!formState.errors.fullName}
+                helperText={formState.errors.fullName}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -226,10 +250,10 @@ function SignUp({ onSignUp, onToggleLogin }) {
               <StyledTextField
                 fullWidth
                 placeholder="Username"
-                value={formData.username}
+                value={formState.username}
                 onChange={handleChange('username')}
-                error={!!errors.username}
-                helperText={errors.username}
+                error={!!formState.errors.username}
+                helperText={formState.errors.username}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -245,10 +269,10 @@ function SignUp({ onSignUp, onToggleLogin }) {
             fullWidth
             placeholder="Email"
             type="email"
-            value={formData.email}
+            value={formState.email}
             onChange={handleChange('email')}
-            error={!!errors.email}
-            helperText={errors.email}
+            error={!!formState.errors.email}
+            helperText={formState.errors.email}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -262,12 +286,12 @@ function SignUp({ onSignUp, onToggleLogin }) {
             <Grid item xs={12} sm={6}>
               <StyledTextField
                 fullWidth
-                type={formData.showPassword ? 'text' : 'password'}
+                type={formState.showPassword ? 'text' : 'password'}
                 placeholder="Password"
-                value={formData.password}
+                value={formState.password}
                 onChange={handleChange('password')}
-                error={!!errors.password}
-                helperText={errors.password}
+                error={!!formState.errors.password}
+                helperText={formState.errors.password}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -277,7 +301,7 @@ function SignUp({ onSignUp, onToggleLogin }) {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton onClick={togglePasswordVisibility} edge="end">
-                        {formData.showPassword ? 
+                        {formState.showPassword ? 
                           <VisibilityOffOutlinedIcon /> : 
                           <VisibilityOutlinedIcon />
                         }
@@ -290,12 +314,12 @@ function SignUp({ onSignUp, onToggleLogin }) {
             <Grid item xs={12} sm={6}>
               <StyledTextField
                 fullWidth
-                type={formData.showPassword ? 'text' : 'password'}
+                type={formState.showPassword ? 'text' : 'password'}
                 placeholder="Confirm Password"
-                value={formData.confirmPassword}
+                value={formState.confirmPassword}
                 onChange={handleChange('confirmPassword')}
-                error={!!errors.confirmPassword}
-                helperText={errors.confirmPassword}
+                error={!!formState.errors.confirmPassword}
+                helperText={formState.errors.confirmPassword}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -310,7 +334,7 @@ function SignUp({ onSignUp, onToggleLogin }) {
           <FormControlLabel
             control={
               <Checkbox
-                checked={formData.acceptTerms}
+                checked={formState.acceptTerms}
                 onChange={handleChange('acceptTerms')}
                 color="primary"
                 size="small"
@@ -322,9 +346,9 @@ function SignUp({ onSignUp, onToggleLogin }) {
               </Typography>
             }
           />
-          {errors.acceptTerms && (
+          {formState.errors.acceptTerms && (
             <Typography color="error" variant="caption">
-              {errors.acceptTerms}
+              {formState.errors.acceptTerms}
             </Typography>
           )}
 
@@ -332,6 +356,7 @@ function SignUp({ onSignUp, onToggleLogin }) {
             fullWidth
             onClick={handleSignUp}
             startIcon={<PersonAddIcon />}
+            disabled={formState.isSubmitting}
           >
             Sign Up
           </GradientButton>
@@ -373,7 +398,7 @@ function SignUp({ onSignUp, onToggleLogin }) {
       </SignUpCard>
 
       <Snackbar
-        open={openSnackbar}
+        open={formState.showSuccessMessage}
         autoHideDuration={2000}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
