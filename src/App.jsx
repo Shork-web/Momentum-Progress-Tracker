@@ -23,8 +23,6 @@ import TabPanel, { StyledTabs, a11yProps } from './components/TabPanel';
 import LandingPage from './components/LandingPage/Landingpage';
 import Login from './components/Login';
 import SignUp from './components/Signup';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
 import ForgotPassword from './components/ForgotPassword';
 
 // Router
