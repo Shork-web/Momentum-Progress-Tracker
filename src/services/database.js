@@ -1,3 +1,4 @@
+
 let db = null;
 
 const DatabaseService = {

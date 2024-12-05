@@ -16,8 +16,6 @@ import PendingActionsIcon from '@mui/icons-material/PendingActions';
 import EditIcon from '@mui/icons-material/Edit';
 import PropTypes from 'prop-types';
 import StorageService from '../services/storage';
-import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../context/NotificationContext';
 import { 
   Dialog,
   DialogTitle,
