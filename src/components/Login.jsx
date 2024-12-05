@@ -172,7 +172,7 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
       } else {
         setFormState(prev => ({ 
           ...prev, 
-          errors: { auth: 'Invalid credentials' },
+          errors: { auth: 'User not found' },
           isSubmitting: false
         }));
       }
