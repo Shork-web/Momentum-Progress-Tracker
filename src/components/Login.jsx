@@ -141,7 +141,7 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
     
     // Validation
     if (!identifier) {
-      errors.identifier = 'Username or email is required';
+      errors.identifier = 'Email is required';
     }
     if (!password) {
       errors.password = 'Password is required';
@@ -205,7 +205,7 @@ function Login({ onLogin, onToggleSignUp, setShowForgotPassword, setShowAuth }) 
         <Stack spacing={3}>
           <StyledTextField
             fullWidth
-            placeholder="Username or Email"
+            placeholder="Email is required"
             value={formState.identifier}
             onChange={handleInputChange('identifier')}
             error={!!formState.errors.identifier || !!formState.errors.auth}
